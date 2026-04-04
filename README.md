@@ -4,18 +4,20 @@ The official Burnt office ping pong leaderboard.
 
 Real scores. Real pride. No mercy. Fully peer-reviewed (by the loser).
 
+**New here?** See [SETUP.md](SETUP.md) to get set up.
+
 ---
 
 ## What is this?
 
-Burntboard is a static website that tracks office table tennis results. Every game gets recorded in a JSON file, the leaderboard updates automatically, and the loser has to approve the PR. It lives at the repo root and deploys to GitHub Pages.
+Burntboard tracks office table tennis results. Every game gets recorded in a JSON file, the leaderboard updates automatically, and the loser approves the PR.
 
-There are three leaderboard views:
+Three leaderboard views:
 - **All-time** — everyone's career record
 - **This month** — current calendar month
 - **This week** — Sunday through Saturday
 
-And two ranking modes:
+Two ranking modes:
 - **By wins** — most wins first (default)
 - **By score** — most total points scored first
 
@@ -36,155 +38,43 @@ Open `games.json` and add an entry at the end of the array:
 }
 ```
 
-Rules:
-- `id` must be unique (just increment from the last one)
-- `date` must be `YYYY-MM-DD`
-- No `winner` field — the winner is derived from the scores automatically
-- Score must be valid (see above) — CI will reject anything else
-- `notes` is optional — only add it if something worth noting happened
+- `id` — increment from the last one
+- `date` — `YYYY-MM-DD`
+- No `winner` field — derived from the scores automatically
+- `notes` — optional, only if something worth noting happened
 
 ---
 
 ## How to add yourself as a player
 
-Open `players.json` and add an entry like this:
+Open `players.json` and add an entry:
 
 ```json
 {
   "username": "yourname",
   "name": "Your Name",
-  "image": "https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f",
-  "bio": "One sentence about your playing style or complete lack thereof.",
+  "image": "images/players/yourname.jpg",
+  "bio": "One sentence about your playing style or lack thereof.",
   "xUrl": "https://x.com/yourhandle",
   "linkedinUrl": "https://linkedin.com/in/yourprofile"
 }
 ```
 
 - `username` — lowercase, no spaces, no `@`
-- `image` — path to your photo: `images/players/yourname.jpg`
-  - **Format:** JPEG or WebP
-  - **Dimensions:** 400×400px (square)
-  - **File size:** under 100KB
-  - Drop the file in the `images/players/` folder before committing
-  - No photo yet? Use a DiceBear placeholder and swap it later:
-    `https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f`
-- `xUrl` and `linkedinUrl` are optional — leave them out entirely if you don't want them.
+- `image` — 400×400px JPEG or WebP, under 100KB, in `images/players/`
+- No photo yet? Use a DiceBear placeholder:
+  `https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f`
+- `xUrl` and `linkedinUrl` are optional
 
 ---
 
 ## How scoring works
 
-Table tennis games go to 11.
-
-The final score you record is the **actual score** — e.g. if you win 11-7, you record `11` and `7`.
-
-**Deuce rule:** If a game reaches 10-10 in real life, it keeps going until someone leads by 2. On Burntboard, all deuce games are recorded as **12-10** — no exceptions. This prevents anyone from farming extra points by dragging out a deuce game.
-
-### Valid final scores
+Games go to 11. If it reaches 10-10, play continues until someone leads by 2 — but always record deuce games as **12-10**. No exceptions.
 
 | Loser scored | Winner scored |
 |---|---|
 | 0 through 9 | 11 |
-| 10 (deuce)  | 12 |
+| 10 (deuce) | 12 |
 
-That's it. `11-10`, `12-9`, `15-13` — all invalid. CI will catch them.
-
----
-
-## Running validation locally
-
-```bash
-npm run validate
-```
-
-This checks both JSON files for every rule. Output is human-readable. If anything is wrong, it tells you exactly what to fix.
-
----
-
-## The full workflow
-
-The ritual: **winner records the game, loser approves the PR.**
-
-### 1. Open Claude Code in the repo
-
-```bash
-claude
-```
-
-### 2. Just describe what happened
-
-```
-Add a game: I (dasmer) beat alex 11-7 today.
-```
-
-```
-Add a game: sarah beat marcus 12-10 today. Deuce.
-```
-
-```
-Add me as a player. Username: jamie, name: Jamie Lee,
-bio: "Undefeated. Technically only played once."
-```
-
-Claude Code will handle everything automatically — edit the JSON, validate, create a branch, commit, push, open a PR, and request review from the other player.
-
-### 3. The loser approves the PR
-
-The loser gets a review request, confirms the score looks right, and approves. CI will catch any invalid scores or bad JSON before anything can merge.
-
-### 4. Merge
-
-Either party merges once CI passes.
-
----
-
-
-## Deploying on GitHub Pages
-
-1. Go to your repo → **Settings** → **Pages**
-2. Set source to **Deploy from a branch**
-3. Choose **main** branch, **/ (root)** folder
-4. Save — GitHub will deploy automatically on every push to `main`
-
-The site is fully static. No build step required.
-
----
-
-## Troubleshooting
-
-**`npm run validate` fails with "invalid score"**
-Double-check the score. Deuce games must be `12-10`, not `11-10` or anything else.
-
-**`npm run validate` says a player doesn't exist**
-The username in `games.json` must exactly match the `username` field in `players.json` — lowercase, no `@`.
-
-**CI fails on my PR**
-Run `npm run validate` locally first. It will show you the exact error with the game/player name.
-
-**Avatar image isn't loading**
-Either the URL is broken or the relative path is wrong. The DiceBear URL approach is the most reliable. You can test the URL directly in your browser.
-
-**I merged the wrong score**
-Add a new game entry as a correction — don't edit old games. If it was a real mistake (wrong player, completely wrong score), open a PR that edits the specific game and explain in the PR body.
-
----
-
-## File structure
-
-```
-burntboard/
-├── index.html          Homepage with hero + recent matches
-├── leaderboard.html    All-time / monthly / weekly leaderboard
-├── profile.html        Individual player profile (?username=dasmer)
-├── styles.css          All styles
-├── app.js              Shared data + ranking logic
-├── players.json        Player roster
-├── games.json          All game records
-├── validate.js         Local validation script
-├── package.json
-├── images/
-│   └── burnttable.jpg  Hero photo
-└── .github/
-    └── workflows/
-        └── validate.yml  CI validation on every PR and push
-```
+`11-10`, `12-9`, anything else — invalid. CI will catch it.
