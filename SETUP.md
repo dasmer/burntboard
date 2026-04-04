@@ -72,17 +72,13 @@ Follow the prompts — choose GitHub.com, SSH, and authenticate via browser.
 
 ### Claude Code
 
-```bash
-npm install -g @anthropic-ai/claude-code
-```
+Download and install the desktop app from [claude.ai/download](https://claude.ai/download).
 
-Then authenticate:
+Sign in with your Anthropic account. Once installed, open a terminal, `cd` into the repo, and run:
 
 ```bash
 claude
 ```
-
-Follow the prompts to log in with your Anthropic account.
 
 ---
 
