@@ -91,40 +91,49 @@ cd burntboard
 
 ---
 
-## The workflow
+## Manual data format (reference)
 
-Once you're set up, recording a game takes about 30 seconds.
+If you ever need to edit the JSON directly rather than through Claude Code.
 
-### 1. Open Claude Code in the repo
+### Recording a game (`games.json`)
 
-```bash
-claude
+Add an entry at the end of the array:
+
+```json
+{
+  "id": "g031",
+  "date": "2026-04-07",
+  "player1": "dasmer",
+  "player2": "alex",
+  "score1": 11,
+  "score2": 7
+}
 ```
 
-### 2. Describe what happened
+- `id` — increment from the last one
+- `date` — `YYYY-MM-DD`
+- No `winner` field — derived from scores automatically
+- `notes` — optional, only if something worth noting happened
+- Valid scores: `11-0` through `11-9`, or `12-10` for deuce
 
+### Adding a player (`players.json`)
+
+```json
+{
+  "username": "yourname",
+  "name": "Your Name",
+  "image": "images/players/yourname.jpg",
+  "bio": "One sentence about your playing style or lack thereof.",
+  "xUrl": "https://x.com/yourhandle",
+  "linkedinUrl": "https://linkedin.com/in/yourprofile"
+}
 ```
-Add a game: I (dasmer) beat alex 11-7 today.
-```
 
-```
-Add a game: sarah beat marcus 12-10 today. Deuce.
-```
-
-```
-Add me as a player. Username: jamie, name: Jamie Lee,
-bio: "Undefeated. Technically only played once."
-```
-
-Claude Code handles everything — edits the JSON, validates, creates a branch, commits, pushes, opens a PR, and requests review from the other player.
-
-### 3. The loser approves
-
-The loser gets a review request on GitHub. They confirm the score and approve. CI catches any invalid scores or bad JSON automatically.
-
-### 4. Merge
-
-Either party merges once CI passes.
+- `username` — lowercase, no spaces, no `@`
+- `image` — 400×400px JPEG or WebP, under 100KB, placed in `images/players/`
+- No photo yet? Use a DiceBear placeholder:
+  `https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f`
+- `xUrl` and `linkedinUrl` are optional
 
 ---
 
