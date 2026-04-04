@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      background: #0d0c0b;
+      font-family: 'Bebas Neue', sans-serif;
+    }
+
+    .bg {
+      position: absolute;
+      inset: 0;
+    }
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 40%;
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(
+          to bottom,
+          rgba(13, 12, 11, 0.15) 0%,
+          rgba(13, 12, 11, 0.40) 35%,
+          rgba(13, 12, 11, 0.85) 68%,
+          rgba(13, 12, 11, 1.00) 100%
+        );
+    }
+
+    .content {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 60px 72px;
+    }
+
+    .eyebrow {
+      font-size: 15px;
+      letter-spacing: 0.26em;
+      color: #E84B1E;
+      margin-bottom: 14px;
+    }
+
+    .title {
+      font-size: 128px;
+      line-height: 0.88;
+      letter-spacing: 0.02em;
+      color: #f5f2ee;
+    }
+
+    .title .accent {
+      color: #E84B1E;
+    }
+
+    .sub {
+      margin-top: 18px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.14em;
+      color: rgba(245, 242, 238, 0.45);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg">
+    <img src="images/burnttable.jpg" alt="">
+    <div class="overlay"></div>
+  </div>
+  <div class="content">
+    <div class="eyebrow">BURNT OFFICE</div>
+    <div class="title">BURNT<span class="accent">BOARD</span></div>
+    <div class="sub">REAL SCORES. REAL PRIDE. NO MERCY.</div>
+  </div>
+</body>
+</html>
