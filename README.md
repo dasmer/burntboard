@@ -1,25 +1,10 @@
 # Burntboard 🏓
 
-The official Burnt office ping pong leaderboard.
+The official Burnt office ping pong leaderboard — [burntboard.com](https://burntboard.com)
 
 Real scores. Real pride. No mercy. Fully peer-reviewed (by the loser).
 
 **New here?** See [SETUP.md](SETUP.md) to get set up first.
-
----
-
-## What is this?
-
-Burntboard tracks office table tennis results. Every game gets recorded in a JSON file, the leaderboard updates automatically, and the loser approves the PR.
-
-Three leaderboard views:
-- **All-time** — everyone's career record
-- **This month** — current calendar month
-- **This week** — Sunday through Saturday
-
-Two ranking modes:
-- **By wins** — most wins first (default)
-- **By score** — most total points scored first
 
 ---
 
