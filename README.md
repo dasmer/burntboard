@@ -40,6 +40,30 @@ That's it. `11-10`, `12-9`, `15-13` — all invalid. CI will catch them.
 
 ---
 
+## How to record a game
+
+Open `games.json` and add an entry at the end of the array:
+
+```json
+{
+  "id": "g031",
+  "date": "2026-04-07",
+  "player1": "dasmer",
+  "player2": "alex",
+  "score1": 11,
+  "score2": 7
+}
+```
+
+Rules:
+- `id` must be unique (just increment from the last one)
+- `date` must be `YYYY-MM-DD`
+- No `winner` field — the winner is derived from the scores automatically
+- Score must be valid (see above) — CI will reject anything else
+- `notes` is optional — only add it if something worth noting happened
+
+---
+
 ## How to add yourself as a player
 
 Open `players.json` and add an entry like this:
@@ -64,30 +88,6 @@ Open `players.json` and add an entry like this:
   - No photo yet? Use a DiceBear placeholder and swap it later:
     `https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f`
 - `xUrl` and `linkedinUrl` are optional — leave them out entirely if you don't want them.
-
----
-
-## How to record a game
-
-Open `games.json` and add an entry at the end of the array:
-
-```json
-{
-  "id": "g031",
-  "date": "2026-04-07",
-  "player1": "dasmer",
-  "player2": "alex",
-  "score1": 11,
-  "score2": 7
-}
-```
-
-Rules:
-- `id` must be unique (just increment from the last one)
-- `date` must be `YYYY-MM-DD`
-- No `winner` field — the winner is derived from the scores automatically
-- Score must be valid (see above) — CI will reject anything else
-- `notes` is optional — only add it if something worth noting happened
 
 ---
 
