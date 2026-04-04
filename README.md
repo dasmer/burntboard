@@ -40,10 +40,6 @@ Add a game: I (dasmer) beat alex 11-7 today.
 ```
 
 ```
-Add a game: I (dasmer) beat marcus 12-10 today. Deuce.
-```
-
-```
 Add me as a player. Username: jamie, name: Jamie Lee,
 bio: "Undefeated. Technically only played once."
 ```
