@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Player Profile — Burntboard</title>
+  <meta name="description" content="Player profile on the Burnt office ping pong leaderboard.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav" id="main-nav">
+    <div class="nav-inner container">
+      <a href="index.html" class="nav-logo">BURNT<span>BOARD</span></a>
+      <div class="nav-links">
+        <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-content">
+    <div class="container">
+
+      <!-- Dynamic content rendered by JS -->
+      <div id="profile-root">
+        <div class="loading-state" style="padding: 100px 0;">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+          <p class="loading-text">Loading player file…</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <span class="footer-brand">BURNT<span>BOARD</span></span>
+        <span class="footer-copy">Made with 🏓 at Burnt</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    // ── Read username from URL ───────────────────────────────
+    function getUsernameFromURL() {
+      const p  = new URLSearchParams(window.location.search);
+      let   un = (p.get('username') || '').trim();
+      if (un.startsWith('@')) un = un.slice(1); // strip leading @
+      return un.toLowerCase();
+    }
+
+    // ── Not-found state ──────────────────────────────────────
+    function renderNotFound(username) {
+      document.title = 'Player Not Found — Burntboard';
+      document.getElementById('profile-root').innerHTML = `
+        <div class="not-found">
+          <div class="empty-state-icon">🤷</div>
+          <h2 class="not-found-title">PLAYER NOT FOUND</h2>
+          <p class="not-found-desc">
+            No one goes by <strong>@${username || '???'}</strong> on Burntboard yet.<br>
+            Add yourself to <code>players.json</code> and open a PR.
+          </p>
+          <a href="leaderboard.html" class="btn btn-primary">Back to Leaderboard</a>
+        </div>`;
+    }
+
+    // ── Rank display ─────────────────────────────────────────
+    function renderStandingCard(scope, label, rank) {
+      const rankCls = rank === null  ? 'rank-none'
+                    : rank === 1     ? 'rank-gold'
+                    : rank === 2     ? 'rank-silver'
+                    : rank === 3     ? 'rank-bronze'
+                    : 'rank-other';
+
+      const rankText = rank === null
+        ? '—'
+        : `#${rank}`;
+
+      const sub = rank === null
+        ? 'No games'
+        : rank === 1 ? '🏆 Leader'
+        : `${rankLabel(rank)} place`;
+
+      return `
+        <div class="standing-card">
+          <div class="standing-scope">${label}</div>
+          <div class="standing-rank ${rankCls}">${rankText}</div>
+          <div class="standing-sub">${sub}</div>
+        </div>`;
+    }
+
+    // ── Profile render ───────────────────────────────────────
+    function renderProfile(player, players, games) {
+      document.title = `${player.name} — Burntboard`;
+
+      // All-time stats
+      const atStats  = getPlayerStats(player.username, games);
+      const atRank   = getPlayerRank(player.username, players, games, 'all-time', 'wins');
+
+      // Month stats
+      const moGames  = filterGamesByScope(games, 'month');
+      const moStats  = getPlayerStats(player.username, moGames);
+      const moRank   = getPlayerRank(player.username, players, games, 'month', 'wins');
+
+      // Week stats
+      const wkGames  = filterGamesByScope(games, 'week');
+      const wkStats  = getPlayerStats(player.username, wkGames);
+      const wkRank   = getPlayerRank(player.username, players, games, 'week', 'wins');
+
+      // Social links
+      const socials = [];
+      if (player.xUrl) {
+        socials.push(`
+          <a href="${player.xUrl}" target="_blank" rel="noopener" class="social-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            X / Twitter
+          </a>`);
+      }
+      if (player.linkedinUrl) {
+        socials.push(`
+          <a href="${player.linkedinUrl}" target="_blank" rel="noopener" class="social-link">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+            LinkedIn
+          </a>`);
+      }
+
+      // Rank badge on avatar (all-time rank)
+      const badgeEmoji = atRank === 1 ? '🥇' : atRank === 2 ? '🥈' : atRank === 3 ? '🥉' : null;
+
+      // Win rate
+      const wPct = winRate(atStats.wins, atStats.gamesPlayed);
+
+      // Recent matches (up to 10)
+      const playerGames = games
+        .filter(g => g.player1 === player.username || g.player2 === player.username)
+        .slice(0, 10);
+
+      const playerMap = Object.fromEntries(players.map(p => [p.username, p]));
+
+      const matchesHTML = playerGames.length === 0
+        ? `<div class="empty-state" style="padding: 40px 0;">
+             <div class="empty-state-icon" style="font-size: 32px;">📋</div>
+             <p class="empty-state-desc">No matches recorded yet.</p>
+           </div>`
+        : playerGames.map(g => {
+            const isWin      = g.winner === player.username;
+            const oppUN      = g.player1 === player.username ? g.player2 : g.player1;
+            const opp        = playerMap[oppUN];
+            const myScore    = g.player1 === player.username ? g.score1 : g.score2;
+            const oppScore   = g.player1 === player.username ? g.score2 : g.score1;
+
+            return `
+              <div class="match-item">
+                <span class="match-result-badge ${isWin ? 'win' : 'loss'}">${isWin ? 'WIN' : 'LOSS'}</span>
+                <span class="match-score">${myScore}–${oppScore}</span>
+                <div class="match-vs-wrap">
+                  <span class="match-vs-label">vs</span>
+                  <a href="profile.html?username=${oppUN}" class="match-opponent-link">
+                    ${opp ? `<img
+                      src="${opp.image}"
+                      alt="${opp.name}"
+                      class="match-opponent-avatar"
+                      onerror="this.onerror=null;this.src=avatarFallback('${opp.name}')"
+                    >` : ''}
+                    <span>${opp ? opp.name : '@' + oppUN}</span>
+                  </a>
+                </div>
+                ${g.notes ? `<span class="match-notes">"${g.notes}"</span>` : ''}
+                <span class="match-date">${timeAgo(g.date)}</span>
+              </div>`;
+          }).join('');
+
+      document.getElementById('profile-root').innerHTML = `
+        <!-- Profile header card -->
+        <div class="page-header" style="padding-bottom: 12px;">
+          <!-- back link -->
+          <a href="leaderboard.html" style="
+            display:inline-flex;align-items:center;gap:6px;
+            font-size:13px;font-weight:600;color:var(--text-muted);
+            margin-bottom:20px;transition:color .2s;
+          " onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'">
+            ← Leaderboard
+          </a>
+        </div>
+
+        <div class="profile-header-card">
+          <div class="profile-avatar-wrap">
+            <img
+              src="${player.image}"
+              alt="${player.name}"
+              class="profile-avatar"
+              onerror="this.onerror=null;this.src=avatarFallback('${player.name}')"
+            >
+            ${badgeEmoji ? `<div class="profile-rank-badge">${badgeEmoji}</div>` : ''}
+          </div>
+
+          <div class="profile-identity">
+            <h1 class="profile-name">${player.name}</h1>
+            <p class="profile-username">@${player.username}</p>
+            <p class="profile-bio">${player.bio}</p>
+            ${socials.length > 0
+              ? `<div class="profile-socials">${socials.join('')}</div>`
+              : ''}
+          </div>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <span class="stat-value win">${atStats.wins}</span>
+            <span class="stat-label">All-Time Wins</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value loss">${atStats.losses}</span>
+            <span class="stat-label">All-Time Losses</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value accent">${wPct}</span>
+            <span class="stat-label">Win Rate</span>
+          </div>
+          <div class="stat-card">
+            <span class="stat-value">${atStats.totalPoints}</span>
+            <span class="stat-label">Total Points</span>
+          </div>
+        </div>
+
+        <!-- Standings -->
+        <div class="profile-section" style="animation: fadeUp 0.5s ease 0.2s forwards; opacity:0;">
+          <p class="profile-section-title">Current Standings</p>
+          <div class="standings-grid">
+            ${renderStandingCard('all-time', 'ALL-TIME',   atRank)}
+            ${renderStandingCard('month',    getMonthRange().label.toUpperCase(), moRank)}
+            ${renderStandingCard('week',     'THIS WEEK',  wkRank)}
+          </div>
+        </div>
+
+        <!-- Recent matches -->
+        <div class="profile-section" style="animation: fadeUp 0.5s ease 0.3s forwards; opacity:0;">
+          <p class="profile-section-title">Recent Matches</p>
+          <div class="match-list">${matchesHTML}</div>
+        </div>
+      `;
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    async function init() {
+      const username = getUsernameFromURL();
+
+      if (!username) {
+        renderNotFound('');
+        return;
+      }
+
+      const { players, games } = await loadData();
+      const player = players.find(p => p.username === username);
+
+      if (!player) {
+        renderNotFound(username);
+        return;
+      }
+
+      renderProfile(player, players, games);
+    }
+
+    init();
+  </script>
+</body>
+</html>

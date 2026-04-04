@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Burntboard — Burnt Office Ping Pong Leaderboard</title>
+  <meta name="description" content="The official Burnt office table tennis leaderboard. Real scores. Real pride. No mercy.">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Homepage-only: nav is transparent over the hero */
+    .nav { background: rgba(13, 12, 11, 0); border-bottom-color: transparent; }
+    .nav.scrolled { background: rgba(13, 12, 11, 0.88); border-bottom-color: var(--border); }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav" id="main-nav">
+    <div class="nav-inner container">
+      <a href="index.html" class="nav-logo">BURNT<span>BOARD</span></a>
+      <div class="nav-links">
+        <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-bg">
+      <img
+        src="images/burnttable.jpg"
+        alt="The Burnt office table tennis table"
+        class="hero-img"
+        id="hero-img"
+      >
+      <div class="hero-overlay"></div>
+    </div>
+
+    <div class="hero-content container">
+      <p class="hero-eyebrow">BURNTBOARD &middot; OFFICIAL STANDINGS</p>
+      <h1 class="hero-title">
+        SETTLE IT<br>
+        <span class="accent">AT THE TABLE.</span>
+      </h1>
+      <p class="hero-subtitle">
+        Burnt's official, peer-reviewed, fully unbiased<br>
+        office ping pong leaderboard.
+      </p>
+      <div class="hero-ctas">
+        <a href="leaderboard.html" class="btn btn-primary btn-lg">See the Standings</a>
+        <a href="leaderboard.html?scope=week" class="btn btn-outline btn-lg">This Week</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Leaderboard scope cards -->
+  <section class="section" style="padding-top: 60px;">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">CHOOSE YOUR VIEW</h2>
+      </div>
+      <div class="scopes-grid">
+        <a href="leaderboard.html?scope=all-time" class="scope-card">
+          <div class="scope-card-icon">🏆</div>
+          <div class="scope-card-title">ALL-TIME</div>
+          <p class="scope-card-desc">The eternal record. Every point since the table arrived.</p>
+        </a>
+        <a href="leaderboard.html?scope=month" class="scope-card scope-card--featured">
+          <div class="scope-card-badge">LIVE NOW</div>
+          <div class="scope-card-icon">📅</div>
+          <div class="scope-card-title">THIS MONTH</div>
+          <p class="scope-card-desc">Monthly glory. Who's had the best run this calendar month?</p>
+        </a>
+        <a href="leaderboard.html?scope=week" class="scope-card">
+          <div class="scope-card-icon">⚡</div>
+          <div class="scope-card-title">THIS WEEK</div>
+          <p class="scope-card-desc">The hot streak board. Sunday through Saturday. Resets weekly.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Recent matches -->
+  <section class="section" style="padding-top: 0;">
+    <div class="container">
+      <div class="section-header">
+        <h2 class="section-title">RECENT BATTLES</h2>
+        <a href="leaderboard.html" class="section-link">Full leaderboard →</a>
+      </div>
+      <div id="recent-matches">
+        <div class="loading-state">
+          <div class="loading-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <p class="loading-text">Fetching the receipts…</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <span class="footer-brand">BURNT<span>BOARD</span></span>
+        <span class="footer-copy">Made with 🏓 at Burnt</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    // ── Nav transparency on scroll ───────────────────────────
+    const nav = document.getElementById('main-nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 40);
+    }, { passive: true });
+
+    // ── Subtle hero image parallax / load ─────────────────────
+    const heroImg = document.getElementById('hero-img');
+    heroImg.addEventListener('load', () => heroImg.classList.add('loaded'));
+
+    // ── Recent matches ────────────────────────────────────────
+    async function initHomepage() {
+      const { players, games } = await loadData();
+      renderRecentMatches(games, players);
+    }
+
+    function renderRecentMatches(games, players) {
+      const container = document.getElementById('recent-matches');
+      const playerMap = Object.fromEntries(players.map(p => [p.username, p]));
+
+      // Show the 8 most recent games (games already sorted desc in loadData)
+      const recent = games.slice(0, 8);
+
+      if (recent.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🏓</div>
+            <h3 class="empty-state-title">NO GAMES YET</h3>
+            <p class="empty-state-desc">The table is waiting. Step up and record the first match.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `<div class="match-feed">${
+        recent.map(g => {
+          const loserUsername = g.winner === g.player1 ? g.player2 : g.player1;
+          const winner = playerMap[g.winner];
+          const loser  = playerMap[loserUsername];
+          if (!winner || !loser) return '';
+
+          const winnerScore = g.winner === g.player1 ? g.score1 : g.score2;
+          const loserScore  = g.winner === g.player1 ? g.score2 : g.score1;
+
+          return `
+            <div class="match-feed-row">
+              <span class="match-feed-date">${formatDateShort(g.date)}</span>
+              <div class="match-feed-players">
+                <a href="profile.html?username=${winner.username}" class="match-feed-winner">
+                  <img
+                    src="${winner.image}"
+                    alt="${winner.name}"
+                    class="match-feed-avatar"
+                    onerror="this.onerror=null;this.src=avatarFallback('${winner.name}')"
+                  >
+                  <span class="match-feed-player-name">${winner.name}</span>
+                </a>
+                <span class="match-feed-score">${winnerScore}–${loserScore}</span>
+                <a href="profile.html?username=${loser.username}" class="match-feed-loser">
+                  <img
+                    src="${loser.image}"
+                    alt="${loser.name}"
+                    class="match-feed-avatar match-feed-avatar--loser"
+                    onerror="this.onerror=null;this.src=avatarFallback('${loser.name}')"
+                  >
+                  <span class="match-feed-player-name">${loser.name}</span>
+                </a>
+              </div>
+              ${g.notes
+                ? `<span class="match-feed-notes">"${g.notes}"</span>`
+                : ''}
+            </div>`;
+        }).join('')
+      }</div>`;
+    }
+
+    initHomepage();
+  </script>
+</body>
+</html>

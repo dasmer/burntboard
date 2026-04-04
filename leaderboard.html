@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Leaderboard — Burntboard</title>
+  <meta name="description" content="The Burnt office ping pong leaderboard. All-time, monthly, and weekly standings.">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav" id="main-nav">
+    <div class="nav-inner container">
+      <a href="index.html" class="nav-logo">BURNT<span>BOARD</span></a>
+      <div class="nav-links">
+        <a href="leaderboard.html" class="nav-link active">Leaderboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-content">
+    <div class="container">
+
+      <!-- Page header -->
+      <div class="page-header">
+        <h1 class="page-title">LEADERBOARD</h1>
+        <p class="page-subtitle" id="scope-label">All Time</p>
+      </div>
+
+      <!-- Controls: scope tabs + mode toggle -->
+      <div class="controls">
+        <div class="tabs" id="scope-tabs" role="tablist" aria-label="Leaderboard scope">
+          <button class="tab" data-scope="all-time"  role="tab">All-Time</button>
+          <button class="tab" data-scope="month"     role="tab">This Month</button>
+          <button class="tab" data-scope="week"      role="tab">This Week</button>
+        </div>
+
+        <div class="mode-toggle" id="mode-toggle" role="group" aria-label="Ranking mode">
+          <button class="mode-btn" data-mode="wins"  >By Wins</button>
+          <button class="mode-btn" data-mode="score" >By Score</button>
+        </div>
+      </div>
+
+      <!-- Leaderboard output -->
+      <div id="leaderboard-container">
+        <div class="loading-state">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+          <p class="loading-text">Crunching the numbers…</p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <span class="footer-brand">BURNT<span>BOARD</span></span>
+        <span class="footer-copy">Made with 🏓 at Burnt</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    let allPlayers, allGames;
+
+    // ── Routing helpers ──────────────────────────────────────
+    function getParams() {
+      const p = new URLSearchParams(window.location.search);
+      return {
+        scope: p.get('scope') || 'all-time',
+        mode:  p.get('mode')  || 'wins',
+      };
+    }
+
+    function setParam(key, value) {
+      const p = new URLSearchParams(window.location.search);
+      p.set(key, value);
+      history.pushState({}, '', '?' + p.toString());
+    }
+
+    // ── Controls ─────────────────────────────────────────────
+    function updateControlUI(scope, mode) {
+      // Scope tabs
+      document.querySelectorAll('[data-scope]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.scope === scope);
+        btn.setAttribute('aria-selected', btn.dataset.scope === scope);
+      });
+
+      // Mode buttons
+      document.querySelectorAll('[data-mode]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+
+      // Scope label under heading
+      let label = 'All Time';
+      if (scope === 'month') label = getMonthRange().label;
+      if (scope === 'week')  label = getWeekRange().label;
+      document.getElementById('scope-label').textContent = label;
+
+      // Page <title>
+      const scopeName = scope === 'all-time' ? 'All-Time'
+        : scope === 'month' ? getMonthRange().label
+        : getWeekRange().label;
+      document.title = `${scopeName} Leaderboard — Burntboard`;
+    }
+
+    // ── Render ───────────────────────────────────────────────
+    function renderLeaderboard() {
+      const { scope, mode } = getParams();
+      updateControlUI(scope, mode);
+
+      const ranked = computeLeaderboard(allPlayers, allGames, scope, mode);
+      const container = document.getElementById('leaderboard-container');
+
+      if (ranked.length === 0) {
+        const periodCopy = scope === 'week'
+          ? 'this week yet'
+          : scope === 'month'
+          ? 'this month yet'
+          : '';
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">🏓</div>
+            <h3 class="empty-state-title">NO GAMES${periodCopy ? ' ' + periodCopy.toUpperCase() : ''}</h3>
+            <p class="empty-state-desc">
+              The table is waiting. Step up, play a game,<br>
+              and record it in the repo.
+            </p>
+          </div>`;
+        return;
+      }
+
+      // Stat label that's currently sorting (highlighted)
+      const primaryWins  = mode === 'wins';
+      const primaryScore = mode === 'score';
+
+      container.innerHTML = `<div class="leaderboard-list">${
+        ranked.map((player, i) => {
+          const rank    = i + 1;
+          const rowCls  = rank <= 3 ? `rank-${rank}` : '';
+          const rankCls = rank === 1 ? 'rank-gold'
+                        : rank === 2 ? 'rank-silver'
+                        : rank === 3 ? 'rank-bronze' : '';
+          const wPct    = winRate(player.wins, player.gamesPlayed);
+          const delay   = Math.min(i * 55, 500); // cap stagger at 500 ms
+
+          return `
+            <a
+              href="profile.html?username=${player.username}"
+              class="lb-row ${rowCls}"
+              style="animation-delay:${delay}ms"
+            >
+              <div class="lb-rank ${rankCls}">${rank}</div>
+
+              <img
+                src="${player.image}"
+                alt="${player.name}"
+                class="lb-avatar"
+                onerror="this.onerror=null;this.src=avatarFallback('${player.name}')"
+              >
+
+              <div class="lb-info">
+                <div class="lb-name">${player.name}</div>
+                <div class="lb-username">@${player.username}</div>
+              </div>
+
+              <div class="lb-stats">
+                <div class="lb-stat ${primaryWins ? 'lb-stat--primary' : ''}">
+                  <span class="lb-stat-value">${player.wins}</span>
+                  <span class="lb-stat-label">Wins</span>
+                </div>
+                <div class="lb-stat">
+                  <span class="lb-stat-value">${player.losses}</span>
+                  <span class="lb-stat-label">Losses</span>
+                </div>
+                <div class="lb-stat">
+                  <span class="lb-stat-value">${wPct}</span>
+                  <span class="lb-stat-label">Win %</span>
+                </div>
+                <div class="lb-stat ${primaryScore ? 'lb-stat--primary' : ''}">
+                  <span class="lb-stat-value">${player.totalPoints}</span>
+                  <span class="lb-stat-label">Points</span>
+                </div>
+              </div>
+            </a>`;
+        }).join('')
+      }</div>`;
+    }
+
+    // ── Event wiring ─────────────────────────────────────────
+    function setupControls() {
+      document.getElementById('scope-tabs').addEventListener('click', e => {
+        const btn = e.target.closest('[data-scope]');
+        if (!btn) return;
+        setParam('scope', btn.dataset.scope);
+        renderLeaderboard();
+      });
+
+      document.getElementById('mode-toggle').addEventListener('click', e => {
+        const btn = e.target.closest('[data-mode]');
+        if (!btn) return;
+        setParam('mode', btn.dataset.mode);
+        renderLeaderboard();
+      });
+
+      // Browser back/forward
+      window.addEventListener('popstate', renderLeaderboard);
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    async function init() {
+      const data = await loadData();
+      allPlayers = data.players;
+      allGames   = data.games;
+      setupControls();
+      renderLeaderboard();
+    }
+
+    init();
+  </script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "name": "burntboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Burnt office ping pong leaderboard",
+  "scripts": {
+    "validate": "node validate.js"
+  }
+}
