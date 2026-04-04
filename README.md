@@ -10,7 +10,7 @@ Real scores. Real pride. No mercy. Fully peer-reviewed (by the loser).
 
 ## The workflow
 
-Once you're set up, recording a game takes about 30 seconds.
+Once you're set up, adding a game takes about 30 seconds.
 
 ### 1. Open Claude Code in the repo
 
@@ -18,7 +18,7 @@ Open the Claude Code desktop app, then open the `burntboard` folder as your proj
 
 ### 2. Describe what happened
 
-#### Recording a game
+#### Add a game
 
 ```
 I beat alex 11-7
