@@ -71,13 +71,13 @@ The site is pure HTML/CSS/JS — no build step, no framework.
 
 ## Handling player photos
 
-If the user provides a photo (file path or dragged into the chat), always:
-1. Use `sips` to resize and convert it: `sips -z 400 400 SOURCE --out images/players/USERNAME.jpg`
-2. This works for JPEG, PNG, HEIC, and WebP — sips handles the conversion automatically
+When adding a player, check if a photo exists in `images/players/` with the player's username (any extension — .jpg, .jpeg, .png, .heic, .webp). If found:
+1. Resize and convert it in place using sips: `sips -z 400 400 SOURCE --out images/players/USERNAME.jpg`
+2. This works for JPEG, PNG, HEIC, and WebP — sips handles conversion automatically
 3. Set `image` in `players.json` to `images/players/USERNAME.jpg`
 4. Include the image file in the commit
 
-If no photo is provided, use a DiceBear placeholder URL and note that they can swap it later.
+If no photo is found, use a DiceBear placeholder URL and mention they can add a real photo later.
 
 ## After any edit
 
