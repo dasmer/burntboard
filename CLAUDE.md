@@ -3,10 +3,15 @@
 This repo is a static office ping pong leaderboard for Burnt.
 The site is pure HTML/CSS/JS — no build step, no framework.
 
-## Repo owner
+## Current user
 
-The person running Claude Code in this repo is **dasmer** (GitHub: `dasmer`).
-When they say "I beat…" or "I lost to…", assume they are `dasmer`.
+When the user says "I beat…" or "I lost to…", determine their username by running:
+
+```bash
+gh api user --jq .login
+```
+
+Use that as their `username` in the game or player record.
 
 ## Key files
 
