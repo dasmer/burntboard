@@ -16,7 +16,7 @@ Once you're set up, adding a game takes about 30 seconds.
 
 Open the Claude Code desktop app, then open the `burntboard` folder as your project.
 
-### 2. Describe what happened
+### 2. Make an update
 
 #### Add a game
 
