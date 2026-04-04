@@ -40,8 +40,8 @@ Add a game: I (dasmer) beat alex 11-7 today.
 ```
 
 ```
-Add me as a player. Username: jamie, name: Jamie Lee,
-bio: "Undefeated. Technically only played once."
+Add me as a player. Name: Jamie Lee,
+bio: "Undefeated. Technically only played once.", username: jamie
 ```
 
 > **Adding a photo?** Drop your image into the `images/players/` folder and name it `yourname.jpg` (e.g. `jamie.jpg`) before running Claude. Any format is fine — Claude will resize and convert it automatically. No photo is fine too — a placeholder avatar gets generated.
