@@ -23,19 +23,6 @@ Two ranking modes:
 
 ---
 
-## How scoring works
-
-Games go to 11. If it reaches 10-10, play continues until someone leads by 2 — but always record deuce games as **12-10**. No exceptions.
-
-| Loser scored | Winner scored |
-|---|---|
-| 0 through 9 | 11 |
-| 10 (deuce) | 12 |
-
-`11-10`, `12-9`, anything else — invalid. CI will catch it.
-
----
-
 ## The workflow
 
 Once you're set up, recording a game takes about 30 seconds.
