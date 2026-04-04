@@ -105,125 +105,39 @@ This checks both JSON files for every rule. Output is human-readable. If anythin
 
 The ritual: **winner records the game, loser approves the PR.**
 
-Here's how to do it with Claude Code and `gh`:
-
-### 1. Create a branch
-
-```bash
-git checkout -b game/dasmer-beat-alex-apr-7
-```
-
-Name it something like `game/winner-beat-loser-date` or `player/add-yourname`.
-
-### 2. Use Claude Code to make the edit
-
-Open Claude Code in the repo:
+### 1. Open Claude Code in the repo
 
 ```bash
 claude
 ```
 
-Then tell it what happened:
+### 2. Just describe what happened
 
 ```
-Add a new game to games.json: I (dasmer) beat alex 11-7 today, April 7 2026.
-No deuce. Use the next available game ID.
+Add a game: I (dasmer) beat alex 11-7 today.
 ```
 
-Or to add yourself:
-
 ```
-Add me as a new player in players.json. My username is "yourname",
-my name is "Your Name", and my bio is "...".
-Use a DiceBear initials avatar with a blue background (2563eb).
+Add a game: sarah beat marcus 12-10 today. Deuce.
 ```
 
-Claude Code will make the edit and you can review the diff.
-
-### 3. Validate
-
-```bash
-npm run validate
+```
+Add me as a player. Username: jamie, name: Jamie Lee,
+bio: "Undefeated. Technically only played once."
 ```
 
-Fix anything it flags before committing.
+Claude Code will handle everything automatically — edit the JSON, validate, create a branch, commit, push, open a PR, and request review from the other player.
 
-### 4. Commit
+### 3. The loser approves the PR
 
-```bash
-git add games.json
-git commit -m "Add game: dasmer beat alex 11-7 (Apr 7)"
-```
+The loser gets a review request, confirms the score looks right, and approves. CI will catch any invalid scores or bad JSON before anything can merge.
 
-For adding a player:
+### 4. Merge
 
-```bash
-git add players.json
-git commit -m "Add player: yourname"
-```
-
-### 5. Push
-
-```bash
-git push -u origin game/dasmer-beat-alex-apr-7
-```
-
-### 6. Open a PR with GitHub CLI
-
-```bash
-gh pr create \
-  --title "Game: dasmer beat alex 11-7 (Apr 7)" \
-  --body "Recorded by the winner. Loser please review and approve."
-```
-
-### 7. Request review from the loser
-
-```bash
-gh pr edit --add-reviewer alex
-```
-
-### 8. The loser approves
-
-The loser opens the PR, confirms the score is correct, and approves. (Dispute the score before approving, not after.)
-
-### 9. Merge
-
-Either party merges once approved.
-
-```bash
-gh pr merge --squash
-```
+Either party merges once CI passes.
 
 ---
 
-## Example Claude Code prompts
-
-```
-Add a new game: I (priya) beat marcus 12-10 today (deuce game). Date is 2026-04-08.
-Use the next available ID after the last game in games.json.
-```
-
-```
-Add me as a player. Username: sarah, name: Sarah Okafor,
-bio: "Joined two months ago. Already top 3."
-Use a purple DiceBear avatar (7c3aed).
-```
-
-```
-Show me the last 5 games in games.json as a quick summary.
-```
-
----
-
-## Example branch names
-
-```
-game/sarah-beat-tom-apr-8
-game/marcus-beat-alex-deuce-apr-9
-player/add-jamie
-```
-
----
 
 ## Deploying on GitHub Pages
 
