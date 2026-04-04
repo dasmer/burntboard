@@ -32,6 +32,8 @@ Add me as a player.
 
 Claude pulls your username, name, and bio from your GitHub profile automatically. Your GitHub avatar is used as a fallback if no photo is found.
 
+> **Want a custom bio?** Just include it: `Add me as a player. Bio: "Serves like a demon, loses like a gentleman."`
+
 > **Want a real photo?** Drop it into `images/players/` named `yourusername.jpg` (e.g. `jamielee.jpg`) before running Claude. Any format works — Claude resizes and converts it automatically.
 
 Claude Code handles everything — edits the JSON, validates, creates a branch, commits, pushes, opens a PR, and requests review from the other player.
