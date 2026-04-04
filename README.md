@@ -53,7 +53,7 @@ Add a game: I (dasmer) beat alex 11-7 today.
 ```
 
 ```
-Add a game: sarah beat marcus 12-10 today. Deuce.
+Add a game: I (dasmer) beat marcus 12-10 today. Deuce.
 ```
 
 ```
