@@ -93,12 +93,13 @@ Fix any errors before committing.
 
 When the user asks you to add a game or add a player, always do all of the following automatically without asking:
 
-1. Make the edit to the relevant JSON file
-2. Run `npm run validate` — fix any errors before continuing
-3. Create a new git branch (e.g. `game/dasmer-beat-alex-apr-7` or `player/add-jamie`)
-4. Commit the change with a clear message (e.g. `Add game: dasmer beat alex 11-7 (Apr 7)`)
-5. Push the branch
-6. Open a PR using `gh pr create` with a short title and a body that says who recorded it and asks the opponent to review
-7. If it's a game, request review from the losing player using `gh pr edit --add-reviewer <username>`
+1. Switch to main and pull the latest: `git checkout main && git pull`
+2. Make the edit to the relevant JSON file
+3. Run `npm run validate` — fix any errors before continuing
+4. Create a new git branch (e.g. `game/dasmer-beat-alex-apr-7` or `player/add-jamie`)
+5. Commit the change with a clear message (e.g. `Add game: dasmer beat alex 11-7 (Apr 7)`)
+6. Push the branch
+7. Open a PR using `gh pr create` with a short title and a body that says who recorded it and asks the opponent to review
+8. If it's a game, request review from the losing player using `gh pr edit --add-reviewer <username>`
 
 Do all of this in one shot. Do not ask for confirmation at each step.
