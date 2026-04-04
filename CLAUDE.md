@@ -59,7 +59,7 @@ The site is pure HTML/CSS/JS — no build step, no framework.
 ## Adding a player
 
 - Append to `players.json`
-- `username`: lowercase, no spaces, no `@`
+- `username`: must match their **GitHub username** exactly (lowercase, no spaces, no `@`)
 - All fields required: `username`, `name`, `image`, `bio`
 - Optional: `xUrl`, `linkedinUrl`
 - For `image`, use a local file: `images/players/username.jpg`

@@ -129,7 +129,7 @@ Add an entry at the end of the array:
 }
 ```
 
-- `username` — lowercase, no spaces, no `@`
+- `username` — must match their **GitHub username** exactly (lowercase, no spaces, no `@`)
 - `image` — 400×400px JPEG or WebP, under 100KB, placed in `images/players/`
 - No photo yet? Use a DiceBear placeholder:
   `https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f`
