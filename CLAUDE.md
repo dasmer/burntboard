@@ -18,7 +18,11 @@ This returns their GitHub profile. Use the fields as follows:
 
 When the user says "I beat…" or "I lost to…", use `login` as their username.
 
-When the user says "add me as a player", pre-fill `username`, `name`, and `bio` from their GitHub profile automatically. Only ask if something critical is missing and can't be inferred.
+When the user says "add me as a player", pre-fill `username`, `name`, and `bio` from their GitHub profile automatically and complete the full workflow (branch, commit, PR). Do not ask for confirmation upfront. After the PR is opened, follow up with something like:
+
+> "Added you as a player using your GitHub profile (name: **Your Name**, bio: "Your bio", photo: GitHub avatar). Want to swap in a custom bio or a real photo? Just say the word and I'll update the PR."
+
+If their GitHub bio is empty, mention that no bio was set and offer to add one.
 
 ## Key files
 
