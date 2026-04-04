@@ -20,9 +20,13 @@ claude
 
 ### 2. Describe what happened
 
+#### Recording a game
+
 ```
 Add a game: I (dasmer) beat alex 11-7 today.
 ```
+
+#### Adding yourself as a player
 
 ```
 Add me as a player. Name: Jamie Lee,
