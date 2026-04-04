@@ -159,12 +159,12 @@
             const oppScore   = g.player1 === player.username ? g.score2 : g.score1;
 
             return `
-              <div class="match-item">
+              <div class="match-item" onclick="location.href='game.html?id=${g.id}'" style="cursor:pointer;">
                 <span class="match-result-badge ${isWin ? 'win' : 'loss'}">${isWin ? 'WIN' : 'LOSS'}</span>
                 <span class="match-score">${myScore}–${oppScore}</span>
                 <div class="match-vs-wrap">
                   <span class="match-vs-label">vs</span>
-                  <a href="profile.html?username=${oppUN}" class="match-opponent-link">
+                  <a href="profile.html?username=${oppUN}" class="match-opponent-link" onclick="event.stopPropagation()">
                     ${opp ? `<img
                       src="${opp.image}"
                       alt="${opp.name}"

@@ -155,10 +155,10 @@
           const loserScore  = g.winner === g.player1 ? g.score2 : g.score1;
 
           return `
-            <div class="match-feed-row">
+            <div class="match-feed-row" onclick="location.href='game.html?id=${g.id}'" style="cursor:pointer;">
               <span class="match-feed-date">${formatDateShort(g.date)}</span>
               <div class="match-feed-players">
-                <a href="profile.html?username=${winner.username}" class="match-feed-winner">
+                <a href="profile.html?username=${winner.username}" class="match-feed-winner" onclick="event.stopPropagation()">
                   <img
                     src="${winner.image}"
                     alt="${winner.name}"
@@ -168,7 +168,7 @@
                   <span class="match-feed-player-name">${winner.name}</span>
                 </a>
                 <span class="match-feed-score">${winnerScore}–${loserScore}</span>
-                <a href="profile.html?username=${loser.username}" class="match-feed-loser">
+                <a href="profile.html?username=${loser.username}" class="match-feed-loser" onclick="event.stopPropagation()">
                   <img
                     src="${loser.image}"
                     alt="${loser.name}"

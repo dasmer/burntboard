@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game — Burntboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .game-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 48px 40px;
+      margin-bottom: 20px;
+      animation: fadeUp 0.45s ease forwards;
+      opacity: 0;
+    }
+
+    .game-date {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+    }
+
+    .game-matchup {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+
+    .game-player {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      transition: opacity 0.2s;
+    }
+
+    .game-player:hover { opacity: 0.75; }
+
+    .game-player--loser { opacity: 0.5; }
+    .game-player--loser:hover { opacity: 0.65; }
+
+    .game-player-avatar {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--border-strong);
+    }
+
+    .game-player--winner .game-player-avatar {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-dim);
+    }
+
+    .game-player-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 22px;
+      letter-spacing: 0.05em;
+      text-align: center;
+    }
+
+    .game-player-username {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .game-player-badge {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border-radius: 5px;
+    }
+
+    .game-player-badge.win {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .game-player-badge.loss {
+      background: var(--surface-3);
+      color: var(--text-muted);
+    }
+
+    .game-score-block {
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .game-score {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(52px, 8vw, 80px);
+      letter-spacing: 0.04em;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .game-score-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .game-deuce-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid var(--gold);
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-top: 8px;
+    }
+
+    .game-notes {
+      padding: 18px 20px;
+      background: var(--surface-2);
+      border-radius: var(--radius);
+      border-left: 3px solid var(--accent);
+      font-size: 14px;
+      font-style: italic;
+      color: var(--text-muted);
+      line-height: 1.7;
+    }
+
+    .game-notes::before {
+      content: '"';
+      color: var(--accent);
+      font-style: normal;
+      font-weight: 800;
+      margin-right: 2px;
+    }
+
+    .game-notes::after {
+      content: '"';
+      color: var(--accent);
+      font-style: normal;
+      font-weight: 800;
+      margin-left: 2px;
+    }
+
+    .h2h-section {
+      animation: fadeUp 0.45s ease 0.15s forwards;
+      opacity: 0;
+      margin-bottom: 32px;
+    }
+
+    .h2h-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .h2h-bar-label {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 18px;
+      width: 32px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    .h2h-bar {
+      flex: 1;
+      height: 8px;
+      background: var(--surface-3);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .h2h-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 4px;
+      transition: width 0.6s ease;
+    }
+
+    .h2h-names {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    @media (max-width: 600px) {
+      .game-card { padding: 28px 20px; }
+      .game-matchup { gap: 12px; }
+      .game-player-avatar { width: 64px; height: 64px; }
+      .game-player-name { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="nav">
+    <div class="nav-inner container">
+      <a href="index.html" class="nav-logo">BURNT<span>BOARD</span></a>
+      <div class="nav-links">
+        <a href="players.html" class="nav-link">Players</a>
+        <a href="leaderboard.html" class="nav-link">Leaderboard</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-content">
+    <div class="container" style="max-width: 680px;">
+      <div id="game-root">
+        <div class="loading-state" style="padding: 100px 0;">
+          <div class="loading-dots"><span></span><span></span><span></span></div>
+          <p class="loading-text">Loading match…</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-inner">
+        <span class="footer-brand">BURNT<span>BOARD</span></span>
+        <span class="footer-copy">Made with 🏓 at Burnt</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+  <script>
+    function renderNotFound(id) {
+      document.title = 'Game Not Found — Burntboard';
+      document.getElementById('game-root').innerHTML = `
+        <div class="not-found">
+          <div class="empty-state-icon">🤷</div>
+          <h2 class="not-found-title">GAME NOT FOUND</h2>
+          <p class="not-found-desc">No game with id "${id || '???'}" exists in the records.</p>
+          <a href="leaderboard.html" class="btn btn-primary">Back to Leaderboard</a>
+        </div>`;
+    }
+
+    async function init() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id') || '';
+
+      if (!id) { renderNotFound(''); return; }
+
+      const { players, games } = await loadData();
+      const game = games.find(g => g.id === id);
+
+      if (!game) { renderNotFound(id); return; }
+
+      const playerMap = Object.fromEntries(players.map(p => [p.username, p]));
+      const p1 = playerMap[game.player1];
+      const p2 = playerMap[game.player2];
+
+      if (!p1 || !p2) { renderNotFound(id); return; }
+
+      document.title = `${p1.name} vs ${p2.name} — Burntboard`;
+
+      const isDeuce = game.score1 === 12 || game.score2 === 12;
+
+      // Head-to-head record between these two players (all time)
+      const h2hGames = games.filter(g =>
+        (g.player1 === game.player1 && g.player2 === game.player2) ||
+        (g.player1 === game.player2 && g.player2 === game.player1)
+      );
+      const p1Wins = h2hGames.filter(g => g.winner === game.player1).length;
+      const p2Wins = h2hGames.filter(g => g.winner === game.player2).length;
+      const total  = h2hGames.length;
+      const p1Pct  = total > 0 ? Math.round((p1Wins / total) * 100) : 50;
+
+      document.getElementById('game-root').innerHTML = `
+        <div class="page-header" style="padding-bottom: 12px;">
+          <a href="javascript:history.back()" style="
+            display:inline-flex;align-items:center;gap:6px;
+            font-size:13px;font-weight:600;color:var(--text-muted);
+            margin-bottom:20px;transition:color .2s;cursor:pointer;
+          " onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text-muted)'">
+            ← Back
+          </a>
+        </div>
+
+        <!-- Main game card -->
+        <div class="game-card">
+          <div class="game-date">${formatDate(game.date)}</div>
+
+          <div class="game-matchup">
+            <!-- Player 1 -->
+            <a href="profile.html?username=${p1.username}"
+               class="game-player ${game.winner === game.player1 ? 'game-player--winner' : 'game-player--loser'}">
+              <img
+                src="${p1.image}"
+                alt="${p1.name}"
+                class="game-player-avatar"
+                onerror="this.onerror=null;this.src=avatarFallback('${p1.name}')"
+              >
+              <div class="game-player-name">${p1.name}</div>
+              <div class="game-player-username">@${p1.username}</div>
+              <div class="game-player-badge ${game.winner === game.player1 ? 'win' : 'loss'}">
+                ${game.winner === game.player1 ? 'Winner' : 'Lost'}
+              </div>
+            </a>
+
+            <!-- Score -->
+            <div class="game-score-block">
+              <div class="game-score">${game.score1}–${game.score2}</div>
+              <div class="game-score-label">Final score</div>
+              ${isDeuce ? '<div class="game-deuce-badge">Deuce</div>' : ''}
+            </div>
+
+            <!-- Player 2 -->
+            <a href="profile.html?username=${p2.username}"
+               class="game-player ${game.winner === game.player2 ? 'game-player--winner' : 'game-player--loser'}">
+              <img
+                src="${p2.image}"
+                alt="${p2.name}"
+                class="game-player-avatar"
+                onerror="this.onerror=null;this.src=avatarFallback('${p2.name}')"
+              >
+              <div class="game-player-name">${p2.name}</div>
+              <div class="game-player-username">@${p2.username}</div>
+              <div class="game-player-badge ${game.winner === game.player2 ? 'win' : 'loss'}">
+                ${game.winner === game.player2 ? 'Winner' : 'Lost'}
+              </div>
+            </a>
+          </div>
+
+          ${game.notes ? `<div class="game-notes">${game.notes}</div>` : ''}
+        </div>
+
+        <!-- Head-to-head -->
+        ${total > 0 ? `
+        <div class="h2h-section">
+          <p class="profile-section-title">Head to Head</p>
+          <div class="h2h-names">
+            <span>${p1.name} — ${p1Wins}W</span>
+            <span>${p2Wins}W — ${p2.name}</span>
+          </div>
+          <div class="h2h-bar-wrap">
+            <div class="h2h-bar-label" style="color:var(--accent)">${p1Wins}</div>
+            <div class="h2h-bar">
+              <div class="h2h-bar-fill" style="width:${p1Pct}%"></div>
+            </div>
+            <div class="h2h-bar-label">${p2Wins}</div>
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:10px;text-align:center;">
+            ${total} game${total !== 1 ? 's' : ''} played between these two
+          </p>
+        </div>` : ''}
+      `;
+    }
+
+    init();
+  </script>
+</body>
+</html>
