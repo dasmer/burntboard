@@ -14,9 +14,7 @@ Once you're set up, recording a game takes about 30 seconds.
 
 ### 1. Open Claude Code in the repo
 
-```
-claude
-```
+Open the Claude Code desktop app, then open the `burntboard` folder as your project.
 
 ### 2. Describe what happened
 
