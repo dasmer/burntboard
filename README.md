@@ -21,7 +21,7 @@ Open the Claude Code desktop app, then open the `burntboard` folder as your proj
 #### Recording a game
 
 ```
-Add a game: I (dasmer) beat alex 11-7 today.
+I beat alex 11-7
 ```
 
 #### Adding yourself as a player
