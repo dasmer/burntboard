@@ -21,25 +21,6 @@ And two ranking modes:
 
 ---
 
-## How scoring works
-
-Table tennis games go to 11.
-
-The final score you record is the **actual score** — e.g. if you win 11-7, you record `11` and `7`.
-
-**Deuce rule:** If a game reaches 10-10 in real life, it keeps going until someone leads by 2. On Burntboard, all deuce games are recorded as **12-10** — no exceptions. This prevents anyone from farming extra points by dragging out a deuce game.
-
-### Valid final scores
-
-| Loser scored | Winner scored |
-|---|---|
-| 0 through 9 | 11 |
-| 10 (deuce)  | 12 |
-
-That's it. `11-10`, `12-9`, `15-13` — all invalid. CI will catch them.
-
----
-
 ## How to record a game
 
 Open `games.json` and add an entry at the end of the array:
@@ -88,6 +69,25 @@ Open `players.json` and add an entry like this:
   - No photo yet? Use a DiceBear placeholder and swap it later:
     `https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f`
 - `xUrl` and `linkedinUrl` are optional — leave them out entirely if you don't want them.
+
+---
+
+## How scoring works
+
+Table tennis games go to 11.
+
+The final score you record is the **actual score** — e.g. if you win 11-7, you record `11` and `7`.
+
+**Deuce rule:** If a game reaches 10-10 in real life, it keeps going until someone leads by 2. On Burntboard, all deuce games are recorded as **12-10** — no exceptions. This prevents anyone from farming extra points by dragging out a deuce game.
+
+### Valid final scores
+
+| Loser scored | Winner scored |
+|---|---|
+| 0 through 9 | 11 |
+| 10 (deuce)  | 12 |
+
+That's it. `11-10`, `12-9`, `15-13` — all invalid. CI will catch them.
 
 ---
 
