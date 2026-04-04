@@ -5,13 +5,20 @@ The site is pure HTML/CSS/JS — no build step, no framework.
 
 ## Current user
 
-When the user says "I beat…" or "I lost to…", determine their username by running:
+Whenever you need to know who the current user is, run:
 
 ```bash
-gh api user --jq .login
+gh api user
 ```
 
-Use that as their `username` in the game or player record.
+This returns their GitHub profile. Use the fields as follows:
+- `login` → `username`
+- `name` → `name`
+- `bio` → `bio` (use as-is, or leave blank if empty — never make one up)
+
+When the user says "I beat…" or "I lost to…", use `login` as their username.
+
+When the user says "add me as a player", pre-fill `username`, `name`, and `bio` from their GitHub profile automatically. Only ask if something critical is missing and can't be inferred.
 
 ## Key files
 
