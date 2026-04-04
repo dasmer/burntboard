@@ -56,7 +56,13 @@ Open `players.json` and add an entry like this:
 ```
 
 - `username` — lowercase, no spaces, no `@`
-- `image` — a URL or a relative path like `images/players/yourname.jpg`. The DiceBear URL above generates a nice initials avatar; swap the `seed` and `backgroundColor` to your taste.
+- `image` — path to your photo: `images/players/yourname.jpg`
+  - **Format:** JPEG or WebP
+  - **Dimensions:** 400×400px (square)
+  - **File size:** under 100KB
+  - Drop the file in the `images/players/` folder before committing
+  - No photo yet? Use a DiceBear placeholder and swap it later:
+    `https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f`
 - `xUrl` and `linkedinUrl` are optional — leave them out entirely if you don't want them.
 
 ---

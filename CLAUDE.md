@@ -62,7 +62,11 @@ The site is pure HTML/CSS/JS — no build step, no framework.
 - `username`: lowercase, no spaces, no `@`
 - All fields required: `username`, `name`, `image`, `bio`
 - Optional: `xUrl`, `linkedinUrl`
-- For `image`, a DiceBear URL works well:
+- For `image`, use a local file: `images/players/username.jpg`
+  - Format: JPEG or WebP
+  - Size: 400×400px, under 100KB
+  - Place the file in `images/players/` before committing
+- If you don't have a photo yet, a DiceBear initials avatar works as a placeholder:
   `https://api.dicebear.com/9.x/initials/svg?seed=Full%20Name&backgroundColor=e8470f`
 
 ## After any edit
