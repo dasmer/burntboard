@@ -22,11 +22,15 @@ Every update requires creating a branch, editing the JSON, opening a PR, and req
 
 #### Add a game
 
+Type this into Claude Code:
+
 ```
 I beat alex 11-7
 ```
 
 #### Add a player
+
+Type this into Claude Code:
 
 ```
 Add me as a player.
