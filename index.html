@@ -146,13 +146,14 @@
 
       container.innerHTML = `<div class="match-feed">${
         recent.map(g => {
-          const loserUsername = g.winner === g.player1 ? g.player2 : g.player1;
-          const winner = playerMap[g.winner];
+          const winnerUN     = gameWinner(g);
+          const loserUsername = winnerUN === g.player1 ? g.player2 : g.player1;
+          const winner = playerMap[winnerUN];
           const loser  = playerMap[loserUsername];
           if (!winner || !loser) return '';
 
-          const winnerScore = g.winner === g.player1 ? g.score1 : g.score2;
-          const loserScore  = g.winner === g.player1 ? g.score2 : g.score1;
+          const winnerScore = winnerUN === g.player1 ? g.score1 : g.score2;
+          const loserScore  = winnerUN === g.player1 ? g.score2 : g.score1;
 
           return `
             <div class="match-feed-row" onclick="location.href='game.html?id=${g.id}'" style="cursor:pointer;">

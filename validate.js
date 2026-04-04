@@ -226,20 +226,11 @@ if (!Array.isArray(games)) {
           `Table tennis games end at 11 (scores: 11-0 through 11-9). ` +
           `Deuce games must be recorded as 12-10, not ${g.score1}-${g.score2}.`
         );
-      } else {
-        // winner
-        const expectedWinner = g.score1 > g.score2 ? g.player1 : g.player2;
+      }
 
-        if (!g.winner || typeof g.winner !== 'string') {
-          fail(`${label}: "winner" is missing`);
-        } else if (g.winner !== g.player1 && g.winner !== g.player2) {
-          fail(`${label}: winner "${g.winner}" must be either player1 ("${g.player1}") or player2 ("${g.player2}")`);
-        } else if (g.winner !== expectedWinner) {
-          fail(
-            `${label}: winner is "${g.winner}" but the score ${g.score1}-${g.score2} means ` +
-            `"${expectedWinner}" won — fix the winner field or swap the scores`
-          );
-        }
+      // winner field is redundant (derived from scores) — flag it if present
+      if (g.winner !== undefined) {
+        warn(`${label}: "winner" field is not needed — the winner is derived from the scores. You can remove it.`);
       }
     }
 

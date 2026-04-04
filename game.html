@@ -279,8 +279,8 @@
         (g.player1 === game.player1 && g.player2 === game.player2) ||
         (g.player1 === game.player2 && g.player2 === game.player1)
       );
-      const p1Wins = h2hGames.filter(g => g.winner === game.player1).length;
-      const p2Wins = h2hGames.filter(g => g.winner === game.player2).length;
+      const p1Wins = h2hGames.filter(g => gameWinner(g) === game.player1).length;
+      const p2Wins = h2hGames.filter(g => gameWinner(g) === game.player2).length;
       const total  = h2hGames.length;
       const p1Pct  = total > 0 ? Math.round((p1Wins / total) * 100) : 50;
 
@@ -302,7 +302,7 @@
           <div class="game-matchup">
             <!-- Player 1 -->
             <a href="profile.html?username=${p1.username}"
-               class="game-player ${game.winner === game.player1 ? 'game-player--winner' : 'game-player--loser'}">
+               class="game-player ${gameWinner(game) === game.player1 ? 'game-player--winner' : 'game-player--loser'}">
               <img
                 src="${p1.image}"
                 alt="${p1.name}"
@@ -311,8 +311,8 @@
               >
               <div class="game-player-name">${p1.name}</div>
               <div class="game-player-username">@${p1.username}</div>
-              <div class="game-player-badge ${game.winner === game.player1 ? 'win' : 'loss'}">
-                ${game.winner === game.player1 ? 'Winner' : 'Lost'}
+              <div class="game-player-badge ${gameWinner(game) === game.player1 ? 'win' : 'loss'}">
+                ${gameWinner(game) === game.player1 ? 'Winner' : 'Lost'}
               </div>
             </a>
 
@@ -325,7 +325,7 @@
 
             <!-- Player 2 -->
             <a href="profile.html?username=${p2.username}"
-               class="game-player ${game.winner === game.player2 ? 'game-player--winner' : 'game-player--loser'}">
+               class="game-player ${gameWinner(game) === game.player2 ? 'game-player--winner' : 'game-player--loser'}">
               <img
                 src="${p2.image}"
                 alt="${p2.name}"
@@ -334,8 +334,8 @@
               >
               <div class="game-player-name">${p2.name}</div>
               <div class="game-player-username">@${p2.username}</div>
-              <div class="game-player-badge ${game.winner === game.player2 ? 'win' : 'loss'}">
-                ${game.winner === game.player2 ? 'Winner' : 'Lost'}
+              <div class="game-player-badge ${gameWinner(game) === game.player2 ? 'win' : 'loss'}">
+                ${gameWinner(game) === game.player2 ? 'Winner' : 'Lost'}
               </div>
             </a>
           </div>

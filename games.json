@@ -6,7 +6,6 @@
     "player2": "alex",
     "score1": 11,
     "score2": 7,
-    "winner": "dasmer",
     "notes": "Alex tried a new serve he saw on YouTube. Dasmer was not impressed."
   },
   {
@@ -16,7 +15,6 @@
     "player2": "sarah",
     "score1": 11,
     "score2": 9,
-    "winner": "priya",
     "notes": "Sarah put up a real fight. Watch this one."
   },
   {
@@ -26,7 +24,6 @@
     "player2": "tom",
     "score1": 11,
     "score2": 3,
-    "winner": "marcus",
     "notes": "Tom is going through something. We're rooting for him."
   },
   {
@@ -36,7 +33,6 @@
     "player2": "dasmer",
     "score1": 12,
     "score2": 10,
-    "winner": "sarah",
     "notes": "April Fools and Dasmer got played. Deuce game."
   },
   {
@@ -46,7 +42,6 @@
     "player2": "priya",
     "score1": 11,
     "score2": 8,
-    "winner": "alex",
     "notes": "Alex's new serve worked exactly once. That was enough."
   },
   {
@@ -55,8 +50,7 @@
     "player1": "tom",
     "player2": "sarah",
     "score1": 11,
-    "score2": 6,
-    "winner": "tom"
+    "score2": 6
   },
   {
     "id": "g007",
@@ -64,8 +58,7 @@
     "player1": "dasmer",
     "player2": "marcus",
     "score1": 11,
-    "score2": 5,
-    "winner": "dasmer"
+    "score2": 5
   },
   {
     "id": "g008",
@@ -74,7 +67,6 @@
     "player2": "tom",
     "score1": 12,
     "score2": 10,
-    "winner": "priya",
     "notes": "Deuce. Classic Priya clutch."
   },
   {
@@ -84,7 +76,6 @@
     "player2": "alex",
     "score1": 11,
     "score2": 2,
-    "winner": "sarah",
     "notes": "Not great for Alex. Character-building stuff."
   },
   {
@@ -94,7 +85,6 @@
     "player2": "dasmer",
     "score1": 11,
     "score2": 9,
-    "winner": "marcus",
     "notes": "The upset of the month. Marcus was vibrating."
   },
   {
@@ -103,8 +93,7 @@
     "player1": "tom",
     "player2": "alex",
     "score1": 11,
-    "score2": 7,
-    "winner": "tom"
+    "score2": 7
   },
   {
     "id": "g012",
@@ -112,8 +101,7 @@
     "player1": "dasmer",
     "player2": "priya",
     "score1": 11,
-    "score2": 4,
-    "winner": "dasmer"
+    "score2": 4
   },
   {
     "id": "g013",
@@ -122,7 +110,6 @@
     "player2": "marcus",
     "score1": 12,
     "score2": 10,
-    "winner": "sarah",
     "notes": "Marcus's signature serve failed him at 10-10. Haunting."
   },
   {
@@ -132,7 +119,6 @@
     "player2": "dasmer",
     "score1": 11,
     "score2": 8,
-    "winner": "alex",
     "notes": "Alex wins one! The entire office cheered. Genuinely."
   },
   {
@@ -141,8 +127,7 @@
     "player1": "priya",
     "player2": "sarah",
     "score1": 11,
-    "score2": 5,
-    "winner": "priya"
+    "score2": 5
   },
   {
     "id": "g016",
@@ -150,8 +135,7 @@
     "player1": "tom",
     "player2": "marcus",
     "score1": 11,
-    "score2": 9,
-    "winner": "tom"
+    "score2": 9
   },
   {
     "id": "g017",
@@ -159,8 +143,7 @@
     "player1": "dasmer",
     "player2": "sarah",
     "score1": 11,
-    "score2": 3,
-    "winner": "dasmer"
+    "score2": 3
   },
   {
     "id": "g018",
@@ -168,8 +151,7 @@
     "player1": "priya",
     "player2": "alex",
     "score1": 11,
-    "score2": 6,
-    "winner": "priya"
+    "score2": 6
   },
   {
     "id": "g019",
@@ -177,8 +159,7 @@
     "player1": "marcus",
     "player2": "sarah",
     "score1": 11,
-    "score2": 8,
-    "winner": "marcus"
+    "score2": 8
   },
   {
     "id": "g020",
@@ -186,8 +167,7 @@
     "player1": "tom",
     "player2": "dasmer",
     "score1": 11,
-    "score2": 7,
-    "winner": "tom"
+    "score2": 7
   },
   {
     "id": "g021",
@@ -196,7 +176,6 @@
     "player2": "marcus",
     "score1": 12,
     "score2": 10,
-    "winner": "alex",
     "notes": "Alex's finest hour. Screenshot this. Frame it."
   },
   {
@@ -205,8 +184,7 @@
     "player1": "sarah",
     "player2": "priya",
     "score1": 11,
-    "score2": 9,
-    "winner": "sarah"
+    "score2": 9
   },
   {
     "id": "g023",
@@ -214,8 +192,7 @@
     "player1": "dasmer",
     "player2": "tom",
     "score1": 11,
-    "score2": 6,
-    "winner": "dasmer"
+    "score2": 6
   },
   {
     "id": "g024",
@@ -223,8 +200,7 @@
     "player1": "priya",
     "player2": "marcus",
     "score1": 11,
-    "score2": 4,
-    "winner": "priya"
+    "score2": 4
   },
   {
     "id": "g025",
@@ -232,8 +208,7 @@
     "player1": "dasmer",
     "player2": "priya",
     "score1": 11,
-    "score2": 8,
-    "winner": "dasmer"
+    "score2": 8
   },
   {
     "id": "g026",
@@ -241,8 +216,7 @@
     "player1": "sarah",
     "player2": "tom",
     "score1": 11,
-    "score2": 3,
-    "winner": "sarah"
+    "score2": 3
   },
   {
     "id": "g027",
@@ -250,8 +224,7 @@
     "player1": "alex",
     "player2": "marcus",
     "score1": 11,
-    "score2": 7,
-    "winner": "alex"
+    "score2": 7
   },
   {
     "id": "g028",
@@ -260,7 +233,6 @@
     "player2": "dasmer",
     "score1": 12,
     "score2": 10,
-    "winner": "marcus",
     "notes": "Marcus goes to deuce and wins. He talked about it for a week."
   },
   {
@@ -269,8 +241,7 @@
     "player1": "tom",
     "player2": "sarah",
     "score1": 11,
-    "score2": 9,
-    "winner": "tom"
+    "score2": 9
   },
   {
     "id": "g030",
@@ -279,7 +250,6 @@
     "player2": "alex",
     "score1": 11,
     "score2": 0,
-    "winner": "priya",
     "notes": "11-0. Alex had a call beforehand. That's his story and he's sticking to it."
   }
 ]

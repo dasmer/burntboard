@@ -152,7 +152,7 @@
              <p class="empty-state-desc">No matches recorded yet.</p>
            </div>`
         : playerGames.map(g => {
-            const isWin      = g.winner === player.username;
+            const isWin      = gameWinner(g) === player.username;
             const oppUN      = g.player1 === player.username ? g.player2 : g.player1;
             const opp        = playerMap[oppUN];
             const myScore    = g.player1 === player.username ? g.score1 : g.score2;

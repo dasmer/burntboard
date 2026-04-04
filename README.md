@@ -72,18 +72,16 @@ Open `games.json` and add an entry at the end of the array:
   "player1": "dasmer",
   "player2": "alex",
   "score1": 11,
-  "score2": 7,
-  "winner": "dasmer",
-  "notes": "Optional one-liner about what happened."
+  "score2": 7
 }
 ```
 
 Rules:
 - `id` must be unique (just increment from the last one)
 - `date` must be `YYYY-MM-DD`
-- `winner` must match the username with the higher score
+- No `winner` field — the winner is derived from the scores automatically
 - Score must be valid (see above) — CI will reject anything else
-- `notes` is optional but encouraged
+- `notes` is optional — only add it if something worth noting happened
 
 ---
 

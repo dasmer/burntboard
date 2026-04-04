@@ -128,7 +128,7 @@ function getPlayerStats(username, games) {
   let totalPoints = 0;
 
   for (const g of mine) {
-    if (g.winner === username) wins++;
+    if (gameWinner(g) === username) wins++;
     totalPoints += g.player1 === username ? g.score1 : g.score2;
   }
 
@@ -266,6 +266,11 @@ function rankLabel(rank) {
   if (rank === 2) return '2nd';
   if (rank === 3) return '3rd';
   return `${rank}th`;
+}
+
+/** Returns the winning player's username derived from the scores. */
+function gameWinner(g) {
+  return g.score1 > g.score2 ? g.player1 : g.player2;
 }
 
 function rankColorClass(rank) {
