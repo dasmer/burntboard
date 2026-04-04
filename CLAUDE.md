@@ -15,6 +15,7 @@ This returns their GitHub profile. Use the fields as follows:
 - `login` → `username`
 - `name` → `name`
 - `bio` → `bio` (use as-is, or leave blank if empty — never make one up)
+- `avatar_url` → `image` (use as the photo unless a local file exists in `images/players/`)
 
 When the user says "I beat…" or "I lost to…", use `login` as their username.
 
