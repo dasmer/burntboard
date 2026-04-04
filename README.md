@@ -27,13 +27,12 @@ Add a game: I (dasmer) beat alex 11-7 today.
 #### Adding yourself as a player
 
 ```
-Add me as a player. Name: Jamie Lee,
-bio: "Undefeated. Technically only played once.", username: jamielee
+Add me as a player.
 ```
 
-> **Username = your GitHub username.** It must match exactly — this is how review requests get routed.
+Claude pulls your username, name, and bio from your GitHub profile automatically. Your GitHub avatar is used as a fallback if no photo is found.
 
-> **Adding a photo?** Drop your image into the `images/players/` folder and name it `yourusername.jpg` (e.g. `jamielee.jpg`) before running Claude. Any format is fine — Claude will resize and convert it automatically. No photo is fine too — a placeholder avatar gets generated.
+> **Want a real photo?** Drop it into `images/players/` named `yourusername.jpg` (e.g. `jamielee.jpg`) before running Claude. Any format works — Claude resizes and converts it automatically.
 
 Claude Code handles everything — edits the JSON, validates, creates a branch, commits, pushes, opens a PR, and requests review from the other player.
 

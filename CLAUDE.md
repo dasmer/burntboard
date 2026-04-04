@@ -94,7 +94,7 @@ When adding a player, check if a photo exists in `images/players/` with the play
 3. Set `image` in `players.json` to `images/players/USERNAME.jpg`
 4. Include the image file in the commit
 
-If no photo is found, use a DiceBear placeholder URL and mention they can add a real photo later.
+If no photo is found, use their GitHub avatar as the fallback: fetch `avatar_url` from `gh api user` and use that as the `image` value.
 
 ## After any edit
 
