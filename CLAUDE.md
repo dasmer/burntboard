@@ -88,8 +88,7 @@ If their GitHub bio is empty, mention that no bio was set and offer to add one.
   - Format: JPEG or WebP
   - Size: 400×400px, under 100KB
   - Place the file in `images/players/` before committing
-- If you don't have a photo yet, a DiceBear initials avatar works as a placeholder:
-  `https://api.dicebear.com/9.x/initials/svg?seed=Full%20Name&backgroundColor=e8470f`
+- If no local photo exists, use the player's GitHub `avatar_url` (see Current user section above)
 
 ## Handling player photos
 

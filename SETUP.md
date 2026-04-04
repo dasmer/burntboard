@@ -131,8 +131,7 @@ Add an entry at the end of the array:
 
 - `username` — must match their **GitHub username** exactly (lowercase, no spaces, no `@`)
 - `image` — 400×400px JPEG or WebP, under 100KB, placed in `images/players/`
-- No photo yet? Use a DiceBear placeholder:
-  `https://api.dicebear.com/9.x/initials/svg?seed=Your%20Name&backgroundColor=e8470f`
+- No photo yet? Claude will use your GitHub avatar automatically.
 - `xUrl` and `linkedinUrl` are optional
 
 ---
@@ -172,7 +171,7 @@ The username in `games.json` must exactly match `players.json` — lowercase, no
 Run `npm run validate` locally first. It will show the exact error.
 
 **Avatar image isn't loading**
-Either the URL is broken or the file path is wrong. The DiceBear URL is the most reliable fallback.
+Either the URL is broken or the file path is wrong. Check the `image` field in `players.json` — it should be a valid local path or a working URL.
 
 **I merged the wrong score**
 Add a corrected game entry — don't edit old ones. If it's a real mistake (wrong player, completely wrong score), open a PR that edits the specific game and explain in the PR body.
