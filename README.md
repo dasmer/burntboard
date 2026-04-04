@@ -44,6 +44,8 @@ Add me as a player. Username: jamie, name: Jamie Lee,
 bio: "Undefeated. Technically only played once."
 ```
 
+> **Adding a photo?** Drag your image into the chat before sending. Claude will resize and convert it automatically. No photo is fine too — a placeholder avatar gets generated.
+
 Claude Code handles everything — edits the JSON, validates, creates a branch, commits, pushes, opens a PR, and requests review from the other player.
 
 ### 3. The loser approves

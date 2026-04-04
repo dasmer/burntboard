@@ -69,6 +69,16 @@ The site is pure HTML/CSS/JS — no build step, no framework.
 - If you don't have a photo yet, a DiceBear initials avatar works as a placeholder:
   `https://api.dicebear.com/9.x/initials/svg?seed=Full%20Name&backgroundColor=e8470f`
 
+## Handling player photos
+
+If the user provides a photo (file path or dragged into the chat), always:
+1. Use `sips` to resize and convert it: `sips -z 400 400 SOURCE --out images/players/USERNAME.jpg`
+2. This works for JPEG, PNG, HEIC, and WebP — sips handles the conversion automatically
+3. Set `image` in `players.json` to `images/players/USERNAME.jpg`
+4. Include the image file in the commit
+
+If no photo is provided, use a DiceBear placeholder URL and note that they can swap it later.
+
 ## After any edit
 
 Always run:
