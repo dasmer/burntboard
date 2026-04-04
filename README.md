@@ -28,7 +28,7 @@ Type this into Claude Code:
 I beat alex 11-7
 ```
 
-#### Add a player
+#### Add yourself as a player
 
 Type this into Claude Code:
 
