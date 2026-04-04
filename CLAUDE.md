@@ -3,6 +3,11 @@
 This repo is a static office ping pong leaderboard for Burnt.
 The site is pure HTML/CSS/JS — no build step, no framework.
 
+## Repo owner
+
+The person running Claude Code in this repo is **dasmer** (GitHub: `dasmer`).
+When they say "I beat…" or "I lost to…", assume they are `dasmer`.
+
 ## Key files
 
 | File | Purpose |
