@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "id": "g001",
+    "date": "2026-04-05",
+    "player1": "jjburnt",
+    "player2": "bob-benji",
+    "score1": 11,
+    "score2": 6
+  },
+  {
+    "id": "g002",
+    "date": "2026-04-05",
+    "player1": "jjburnt",
+    "player2": "bob-benji",
+    "score1": 11,
+    "score2": 9
+  }
+]
