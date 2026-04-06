@@ -14,5 +14,22 @@
     "player2": "bob-benji",
     "score1": 11,
     "score2": 9
+  },
+  {
+    "id": "g003",
+    "date": "2026-04-05",
+    "player1": "jjburnt",
+    "player2": "rherhe-burnt",
+    "score1": 11,
+    "score2": 6
+  },
+  {
+    "id": "g004",
+    "date": "2026-04-05",
+    "player1": "jjburnt",
+    "player2": "rherhe-burnt",
+    "score1": 12,
+    "score2": 10,
+    "notes": "Deuce. Rhea pushed it to the edge but the Indian Mamba closed it out."
   }
 ]
