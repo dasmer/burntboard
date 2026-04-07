@@ -20,7 +20,26 @@
     "date": "2026-04-05",
     "player1": "bob-benji",
     "player2": "dasmer",
+    "score1": 12,
+    "score2": 10,
+    "notes": "Deuce. Benji opens the series with a gutsy win."
+  },
+  {
+    "id": "g004",
+    "date": "2026-04-05",
+    "player1": "dasmer",
+    "player2": "bob-benji",
     "score1": 11,
-    "score2": 4
+    "score2": 4,
+    "notes": "Dasmer's only sign of life in the series."
+  },
+  {
+    "id": "g005",
+    "date": "2026-04-05",
+    "player1": "bob-benji",
+    "player2": "dasmer",
+    "score1": 12,
+    "score2": 10,
+    "notes": "Another deuce, another Benji win. Dasmer got cooked 2-1 in the series."
   }
 ]
