@@ -63,5 +63,30 @@
     "player2": "bob-benji",
     "score1": 11,
     "score2": 9
+  },
+  {
+    "id": "g009",
+    "date": "2026-04-07",
+    "player1": "jjburnt",
+    "player2": "dasmer",
+    "score1": 11,
+    "score2": 8
+  },
+  {
+    "id": "g010",
+    "date": "2026-04-07",
+    "player1": "dasmer",
+    "player2": "jjburnt",
+    "score1": 11,
+    "score2": 9
+  },
+  {
+    "id": "g011",
+    "date": "2026-04-07",
+    "player1": "jjburnt",
+    "player2": "dasmer",
+    "score1": 11,
+    "score2": 5,
+    "notes": "Best of 3 decider. JJ clinches the series 2-1 over Aman."
   }
 ]
