@@ -55,8 +55,7 @@ try {
     (
       await call("/games", "POST", {
         opponent: "ben",
-        score1: 11,
-        score2: 7,
+        matches: [{score1:11,score2:7},{score1:11,score2:9}],
         date: "2026-10-08",
       })
     ).status,
@@ -67,7 +66,7 @@ try {
       await call(
         "/games",
         "POST",
-        { opponent: "ben", score1: 11, score2: 10, date: "2026-10-08" },
+        { opponent: "ben", matches:[{score1:11,score2:10},{score1:11,score2:9}], date: "2026-10-08" },
         dasmer,
       )
     ).status,
@@ -78,8 +77,7 @@ try {
     "POST",
     {
       opponent: "ben",
-      score1: 14,
-      score2: 12,
+      matches:[{score1:14,score2:12},{score1:9,score2:11},{score1:11,score2:7}],
       date: "2026-10-08",
       notes: "A deuce finish",
     },
@@ -92,7 +90,7 @@ try {
       await call(
         "/games/" + id,
         "PATCH",
-        { score1: 11, score2: 9, revision: 1 },
+        { matches:[{score1:11,score2:9},{score1:11,score2:8}], revision: 1 },
         rhea,
       )
     ).status,
@@ -103,7 +101,7 @@ try {
       await call(
         "/games/" + id,
         "PATCH",
-        { score1: 11, score2: 9, revision: 1 },
+        { matches:[{score1:11,score2:9},{score1:11,score2:8}], revision: 1 },
         dasmer,
       )
     ).status,
@@ -114,7 +112,7 @@ try {
       await call(
         "/games/" + id,
         "PATCH",
-        { score1: 11, score2: 8, revision: 1 },
+        { matches:[{score1:11,score2:8},{score1:11,score2:7}], revision: 1 },
         dasmer,
       )
     ).status,
@@ -123,8 +121,9 @@ try {
   let s = (await call("/state", "GET", undefined, dasmer)).body,
     g = s.games.find((g) => g.id === id);
   check(g.history.length, 2);
-  check(g.history[0].before.score1, 14);
-  check(g.score2, 9);
+  check(g.history[0].before.matches[0].score1, 14);
+  check(g.score2, 0);
+  check(g.matches.length,2);
   check(
     (
       await call(

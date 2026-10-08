@@ -1,4 +1,5 @@
 import http from "node:http";
+import {seriesScore} from "./series.mjs";
 import { readFile } from "node:fs/promises";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { dirname, resolve, extname, sep } from "node:path";
@@ -88,8 +89,7 @@ function seed() {
     id: `match-${i + 1}`,
     player1: p[0],
     player2: p[1],
-    score1: p[2],
-    score2: p[3],
+    ...seriesScore(i % 2 ? [{score1:p[2],score2:p[3]},{score1:p[3],score2:p[2]},{score1:p[2],score2:p[3]}] : [{score1:p[2],score2:p[3]},{score1:p[2],score2:p[3]}]),
     notes: p[4],
     date: `2026-10-${i < 4 ? "08" : i < 7 ? "07" : "02"}`,
     createdAt: new Date(Date.UTC(2026, 9, 8, 19 - i)).toISOString(),
@@ -118,11 +118,12 @@ function seed() {
         id: randomUUID(),
         actor: p[0],
         action: "game.recorded",
-        text: "Recorded this match",
+        text: "Recorded this game",
         createdAt: new Date(Date.UTC(2026, 9, 8, 19 - i)).toISOString(),
       },
     ],
   }));
+  for (const g of games) g.history[0].after={score1:g.score1,score2:g.score2,matches:g.matches,notes:g.notes};
   state = {
     players,
     games,
@@ -152,20 +153,7 @@ function record(user, action, text, game, extra = {}) {
   if (game) game.history.unshift(e);
   return e;
 }
-function scores(b) {
-  const a = Number(b.score1),
-    c = Number(b.score2),
-    hi = Math.max(a, c),
-    lo = Math.min(a, c);
-  if (
-    !Number.isInteger(a) ||
-    !Number.isInteger(c) ||
-    lo < 0 ||
-    !((hi === 11 && lo <= 9) || (hi >= 12 && hi - lo === 2))
-  )
-    throw error("Play to 11, win by two. Check the final score.");
-  return { score1: a, score2: c };
-}
+const scores = b => seriesScore(b.matches);
 const mime = {
   ".html": "text/html",
   ".css": "text/css",
@@ -333,7 +321,7 @@ export const demoHandler = async (req, res) => {
           history: [],
         };
         state.games.unshift(g);
-        record(user, "game.recorded", "Recorded this match", g, extra);
+        record(user, "game.recorded", "Recorded this game", g, {...extra,after:{score1:g.score1,score2:g.score2,matches:g.matches,notes:g.notes}});
         result = { id: g.id };
       } else if (/^\/games\/[^/]+/.test(path)) {
         requireUser(user);
@@ -348,10 +336,10 @@ export const demoHandler = async (req, res) => {
               "This score just changed. Reopen the match before correcting it.",
               409,
             );
-          const before = { score1: g.score1, score2: g.score2, notes: g.notes },
+          const before = { score1: g.score1, score2: g.score2, matches:g.matches, notes: g.notes },
             after = {
               ...scores(b),
-              notes: String(b.notes || "").slice(0, 240),
+              notes: b.notes === undefined ? g.notes : String(b.notes || "").slice(0, 240),
             };
           Object.assign(g, after, { revision: g.revision + 1 });
           record(

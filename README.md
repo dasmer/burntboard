@@ -26,7 +26,7 @@ The Agents page creates a named personal key and a setup instruction containing 
 
 ## Testing without touching production
 
-The linked development project is burntboard-test, separate from any production backend. Integration tests refuse to run unless APP_ENV=test, the linked project name matches, and the backend URL matches the link. Startup also checks the database environment marker against APP_ENV.
+The linked development project is burntboard-test (or a fresh burntboard-series-test for series validation), separate from any production backend. Integration tests refuse to run unless APP_ENV=test, the linked project name matches, and the backend URL matches the link. Startup also checks the database environment marker against APP_ENV.
 
 Set EMAIL_TEST_RECIPIENTS to an exact authorized inbox. EMAIL_TEST_SINK optionally routes all eligible test identities to that inbox. bob@am.useallowance.com is the controlled test sink used during development; it is not an eligible signup domain. Set EMAIL_DELIVERY_ENABLED=false while running fixtures to leave notification emails queued; login emails still send to the permitted sink. Production refuses test routing settings.
 
@@ -53,3 +53,5 @@ The previous site is static. This app requires the Node server; GitHub Pages can
 Production is linked as burntboard-production (e4bf0edf-79f4-47b0-ba08-a459cd6a7955). The compute service is b79824a0-7ffe-49a8-9806-9a79e7c8c11b. Credentials remain in ignored local configuration and encrypted hosting settings. Future releases update the existing compute service by name; deploy hosting/ only when routing changes. Neither deployment automatically follows GitHub merges.
 
 The queue leases work to avoid simultaneous workers and uses Resend idempotency keys. Uncertain deliveries stop retrying before the provider's 24-hour deduplication window expires; inspect bb_outbox for unsent rows and last_error during operations. Interrupted delivery may require an operator to reconcile a row with Resend before retrying. There is no in-app admin panel.
+
+Each game is a completed best-of-three series: two matches for a sweep, three when the first two are split. Matches are to 11, win by two. The API accepts an ordered matches array, and the database generates series win totals. Leaderboard wins/losses count games; points sum all match points. Prelaunch schema definitions are updated in place; no historical-data migration or score conversion is included. Existing prelaunch databases need their empty game schema rebuilt before this server is deployed.

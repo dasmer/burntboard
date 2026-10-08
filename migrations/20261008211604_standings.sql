@@ -4,8 +4,8 @@ with periods(period,start_date) as (
     ('month',date_trunc('month',now() at time zone 'America/Los_Angeles')::date),
     ('week',date_trunc('week',now() at time zone 'America/Los_Angeles')::date)
 ), sides as (
-  select player1 id,player2 opponent,score1 points,(score1>score2)::int win,date from public.bb_games
-  union all select player2,player1,score2,(score2>score1)::int,date from public.bb_games
+  select player1 id,player2 opponent,(select sum((m->>'score1')::integer) from jsonb_array_elements(matches) m) points,(score1>score2)::int win,date from public.bb_games
+  union all select player2,player1,(select sum((m->>'score2')::integer) from jsonb_array_elements(matches) m),(score2>score1)::int,date from public.bb_games
 ), totals as (
   select periods.period,sides.id,count(*) played,sum(win) wins,count(*)-sum(win) losses,sum(points) points,
     round(sum(win)*100.0/count(*)) rate

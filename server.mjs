@@ -1,4 +1,5 @@
 import http from 'node:http';
+import {seriesScore} from './series.mjs';
 import {readFile} from 'node:fs/promises';
 import {resolve,extname} from 'node:path';
 import sharp from 'sharp';
@@ -9,8 +10,8 @@ import {deliverOutbox} from './server/email.mjs';
 import {demoHandler} from './prototype-server.mjs';
 import {checkProxy,clientIp} from './server/proxy.mjs';
 const root=resolve('.');
-const allowed=new Set(['/index.html','/client.js','/client.css','/favicon.svg','/agent.md','/demo-agent.md']);
-const mime={'.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.md':'text/markdown; charset=utf-8'};
+const allowed=new Set(['/index.html','/client.js','/client.css','/favicon.svg','/agent.md','/demo-agent.md','/series.mjs']);
+const mime={'.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.md':'text/markdown; charset=utf-8'};
 async function jsonBody(req) {
   const chunks=[];let size=0;
   for await (const chunk of req) {size+=chunk.length;if(size>3000000) throw error('Photo is too large.',413);chunks.push(chunk);}
@@ -101,6 +102,7 @@ async function api(req,res,url) {
       action==='comments' && req.method==='POST'?'comment.added':action==='comments' && req.method==='DELETE'?'comment.removed':
       action==='react' && req.method==='POST'?'reaction.updated':action==='subscription' && req.method==='PATCH'?'subscription.updated':null;
     if(!operation) throw error('Not found.',404);
+    if(operation==='game.recorded' || operation==='game.corrected') Object.assign(body,seriesScore(body.matches));
     if(operation==='comment.added') {
       if(!Array.isArray(body.mentions || []) || (body.mentions || []).length>50 || (body.mentions || []).some(id=>!uuid(id))) throw error('Choose valid mentioned players.');
       body.text=String(body.text || '').trim();if(!body.text || body.text.length>500) throw error('Write a comment under 500 characters.');

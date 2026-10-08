@@ -21,10 +21,10 @@ begin
     if (p_body->>'date')::date > (now() at time zone 'America/Los_Angeles')::date then
       return jsonb_build_object('error','Games cannot be recorded in the future.');
     end if;
-    insert into public.bb_games(player1,player2,score1,score2,date,notes)
-    values(s.player_id,(p_body->>'opponent')::uuid,(p_body->>'score1')::integer,(p_body->>'score2')::integer,(p_body->>'date')::date,coalesce(p_body->>'notes','')) returning * into g;
+    insert into public.bb_games(player1,player2,matches,date,notes)
+    values(s.player_id,(p_body->>'opponent')::uuid,p_body->'matches',(p_body->>'date')::date,coalesce(p_body->>'notes','')) returning * into g;
     insert into public.bb_subscriptions(game_id,player_id) values(g.id,g.player1),(g.id,g.player2);
-    description := 'Recorded a match'; subject := 'A new match is on the board';
+    description := 'Recorded a game'; subject := 'A new game is on the board';
     result := jsonb_build_object('id',g.id);
   elsif p_action in ('game.corrected','comment.added','comment.removed','reaction.updated','subscription.updated') then
     select * into g from public.bb_games where id=p_game for update;
@@ -32,8 +32,8 @@ begin
     if p_action='game.corrected' then
       if s.player_id not in (g.player1,g.player2) then return jsonb_build_object('error','Only participants can correct this match.','status',403); end if;
       if g.revision<>(p_body->>'revision')::integer or p_body->>'revision' is null then return jsonb_build_object('error','The score changed. Refresh before saving.','status',409); end if;
-      old_data := jsonb_build_object('score1',g.score1,'score2',g.score2,'notes',g.notes);
-      update public.bb_games set score1=(p_body->>'score1')::integer,score2=(p_body->>'score2')::integer,
+      old_data := jsonb_build_object('score1',g.score1,'score2',g.score2,'matches',g.matches,'notes',g.notes);
+      update public.bb_games set matches=p_body->'matches',
         notes=coalesce(p_body->>'notes',''),revision=revision+1 where id=g.id returning * into g;
       description := 'Corrected the score'; subject := 'Your match score was corrected';
     elsif p_action='comment.added' then
@@ -75,7 +75,7 @@ begin
   end if;
   insert into public.bb_activity(id,actor,game_id,action,description,agent,before_data,after_data)
     values(event,s.player_id,g.id,p_action,description,case when s.kind='agent' then s.label end,old_data,
-      case when p_action in ('game.recorded','game.corrected') then jsonb_build_object('score1',g.score1,'score2',g.score2,'notes',g.notes) end);
+      case when p_action in ('game.recorded','game.corrected') then jsonb_build_object('score1',g.score1,'score2',g.score2,'matches',g.matches,'notes',g.notes) end);
   if subject is not null then
     for recipient in
       select p.id from public.bb_players p where p.notifications and p.id<>s.player_id and
@@ -84,7 +84,7 @@ begin
     loop
       insert into public.bb_outbox(event_id,recipient,subject,payload) values(event,recipient,subject,
         jsonb_build_object('gameId',g.id,'actor',s.player_id,'action',p_action,'text',p_body->>'text','before',old_data,
-          'after',jsonb_build_object('score1',g.score1,'score2',g.score2)));
+          'after',jsonb_build_object('score1',g.score1,'score2',g.score2,'matches',g.matches)));
     end loop;
   end if;
   insert into public.bb_requests(player_id,key,fingerprint,response) values(s.player_id,p_key,p_fingerprint,result);

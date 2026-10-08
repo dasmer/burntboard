@@ -2104,3 +2104,11 @@ select {
 .mention-picker button:hover,.mention-picker button:focus-visible { background:#f4f1e8; }
 .mention-picker small { display:block; color:var(--muted); }
 .post-actions { flex-wrap:wrap; }
+
+.match-scores{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 4px;color:var(--muted)}
+.match-scores span{display:grid;gap:4px;text-align:center;padding:8px 12px;border:1px solid #dedbd2;border-radius:10px}
+.match-scores small{font-size:9px;letter-spacing:1px}.match-scores strong{font-size:15px;color:#242b22}
+.series-match{border:0;border-top:1px solid #dedbd2;padding:2px 0 0;margin:6px 0}.series-match legend{font-size:12px;font-weight:700;padding-right:12px}.series-match[hidden]{display:none}.series-match .score-inputs{margin:4px 0;padding:8px}.series-match .score-inputs label{margin-bottom:4px}.series-match .score-inputs input{height:44px;font-size:32px}
+form[data-form="game"]>label{margin-top:12px}form[data-form="game"] textarea{min-height:64px}form[data-form="game"] .form-footer{margin-top:16px}
+.match-hero .match-scores,.success .match-scores{justify-content:center}
+form[data-form="game"] .series-status{margin:6px 0}
