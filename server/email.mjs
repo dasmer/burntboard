@@ -29,7 +29,7 @@ export async function deliverOutbox(eventId=null) {
         const score=item.payload.after;
         const before=item.payload.before;
         const message=item.payload.action==='agent.connected' ? `A new agent connection, ${item.payload.label}, was created for your account. Disconnect it on the Agents page if you did not create it.` : item.payload.action==='comment.added' ? `${actor?.name || 'A player'} commented: ${item.payload.text}` :
-          `${actor?.name || 'A player'} ${before ? `corrected the score from ${before.score1}–${before.score2} to` : 'recorded a match:'} ${score.score1}–${score.score2}.`;
+          `${actor?.name || 'A player'} ${before ? `corrected the score from ${before.score1}–${before.score2} (${before.matches.map(m=>`${m.score1}–${m.score2}`).join(', ')}) to` : 'recorded a best-of-three game:'} ${score.score1}–${score.score2} (${score.matches.map(m=>`${m.score1}–${m.score2}`).join(', ')}).`;
         await sendEmail({to:recipient.email,subject:item.subject,text:`${message}\n\nView match: ${link}\nManage email preferences in your Burntboard profile.`,
           html:`<h1>Table talk.</h1><p>${escape(message)}</p><p><a href="${escape(link)}">View match</a></p><p>Manage email preferences in your Burntboard profile.</p>`,key:`bb-${item.id}`});
         await query(db.database.from('bb_outbox').update({sent_at:new Date().toISOString(),leased_until:null,last_error:null}).eq('id',item.id));

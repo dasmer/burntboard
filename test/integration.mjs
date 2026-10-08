@@ -8,7 +8,7 @@ import {hash,secret} from '../server/auth.mjs';
 import {sendEmail} from '../server/email.mjs';
 const linked=JSON.parse(readFileSync(new URL('../.insforge/project.json',import.meta.url)));
 assert.equal(config.environment,'test');
-assert.equal(linked.project_name,'burntboard-test','Integration fixtures must never enter production.');
+assert.ok(['burntboard-test','burntboard-series-test'].includes(linked.project_name),'Integration fixtures must never enter production.');
 assert.equal(config.url,linked.oss_host);
 const origin=process.env.TEST_ORIGIN || 'http://localhost:4176';
 const prefix='bb'+Date.now().toString(36);
@@ -37,21 +37,42 @@ const a=await login('a'),b=await login('b'),c=await login('c'),d=await login('d'
 check((await call('/state')).value.players,[],'Anonymous users cannot read clubhouse data');
 check((await call('/auth/request','POST',{email:'outsider@example.com'})).status,400);
 check((await call('/auth/request','POST',{email:'bob@am.useallowance.com'})).status,400,'Test sink does not expand signup allowlist');
-const body={opponent:b.user.id,score1:11,score2:7,date:'2026-10-08',notes:'Integration test'};
+const body={opponent:b.user.id,matches:[{score1:11,score2:7},{score1:11,score2:9}],date:'2026-10-08',notes:'Integration test'};
+const win=body.matches[0],loss={score1:9,score2:11},deuce={score1:14,score2:12};
+for(const matches of [undefined,[],[win],[win,loss],[win,win,loss],[loss,loss,win],
+  [win,{score1:11,score2:10}],[win,{score1:13,score2:10}],[win,null]]) {
+  check((await call('/games','POST',{...body,matches},a.auth)).status,400,'Reject invalid or unfinished series');
+  if(matches!==undefined) {
+    const direct=await db.database.from('bb_games').insert([{player1:a.user.id,player2:b.user.id,matches,date:body.date}]);
+    check(Boolean(direct.error),true,'Database independently rejects invalid series');
+  }
+}
+for(const matches of [[win,win],[loss,loss],[win,loss,deuce],[loss,win,loss]]) {
+  check(await rpc('bb_series_wins',{matches,side:1}),matches.filter(m=>m.score1>m.score2).length,'SQL series validator agrees with match winners');
+}
 const key=randomUUID();
 const recorded=await call('/games','POST',body,a.auth,key);check(recorded.status,200);
 const id=recorded.value.id;
 check((await call('/games','POST',body,a.auth,key)).value.id,id,'Retry does not create a second game');
 check((await call('/games','POST',{...body,notes:'Changed'},a.auth,key)).status,409);
 check((await call('/games','POST',{...body,opponent:a.user.id},a.auth)).status,400);
-check((await call('/games','POST',{...body,score1:12,score2:7},a.auth)).status,400);
+check((await call('/games','POST',{...body,matches:[{score1:12,score2:7},{score1:11,score2:9}]},a.auth)).status,400);
 check((await call('/games','POST',{...body,date:'2099-01-01'},a.auth)).status,400);
-check((await call('/games/'+id,'PATCH',{score1:11,score2:9,revision:1},c.auth)).status,403);
-const corrections=await Promise.all([call('/games/'+id,'PATCH',{score1:11,score2:9,revision:1},a.auth),call('/games/'+id,'PATCH',{score1:11,score2:8,revision:1},b.auth)]);
+check((await call('/games/'+id,'PATCH',{matches:[{score1:11,score2:9},{score1:11,score2:8}],revision:1},c.auth)).status,403);
+const corrections=await Promise.all([call('/games/'+id,'PATCH',{matches:[{score1:11,score2:9},{score1:11,score2:8}],revision:1},a.auth),call('/games/'+id,'PATCH',{matches:[{score1:11,score2:8},{score1:11,score2:7}],revision:1},b.auth)]);
 check(corrections.map(c=>c.status).sort(),[200,409],'Concurrent corrections must conflict');
 let game=(await call('/state','GET',undefined,a.auth)).value.games.find(g=>g.id===id);
-check(game.revision,2);check(game.history.length,2);check(game.history[0].before.score2,7);
+check(game.revision,2);check(game.history.length,2);check(game.history[0].before.matches[0].score2,7);
 check(game.notes,'Integration test','Score-only corrections preserve match notes');
+check([game.score1,game.score2],[2,0],'Scores count match wins');
+check((await call('/games/'+id,'PATCH',{matches:[win,loss,deuce],revision:2},b.auth)).status,200,'Player 2 can correct a deciding match using fixed player order');
+let seriesState=(await call('/state','GET',undefined,a.auth)).value;
+game=seriesState.games.find(g=>g.id===id);
+check([game.score1,game.score2],[2,1]);check(game.matches,[win,loss,deuce]);
+check(seriesState.standings.all.find(p=>p.id===a.user.id).wins,1,'A three-match game counts as one win');
+check(seriesState.standings.all.find(p=>p.id===a.user.id).points,34,'Points include all individual matches');
+const scoreEmail=(await query(db.database.from('bb_outbox').select('payload').eq('payload->>gameId',id).eq('payload->>action','game.corrected').order('created_at',{ascending:false}).limit(1)))[0];
+check(scoreEmail.payload.after.matches,[win,loss,deuce],'Notification preserves all match scores');
 await call('/me','PATCH',{username:prefix+'c',name:'Mention test C'},c.auth);
 const comment=await call('/games/'+id+'/comments','POST',{text:`Hello @${prefix}c`,mentions:[c.user.id]},a.auth);check(comment.status,200);
 let mail=await query(db.database.from('bb_outbox').select('recipient,payload').eq('payload->>gameId',id).limit(20));
@@ -81,6 +102,9 @@ const connection=await call('/agent-keys','POST',{label:'Integration agent'},a.a
 const agent={Authorization:'Bearer '+connection.value.token};
 check((await call('/state','GET',undefined,agent)).value.user.id,a.user.id);
 check((await call('/me','PATCH',{bio:'Updated via agent'},agent)).status,200);
+check((await call('/games/'+id,'PATCH',{matches:[loss,loss],revision:3},agent)).status,200,'Agent can record the opposite-player sweep');
+game=(await call('/state','GET',undefined,a.auth)).value.games.find(g=>g.id===id);
+check([game.score1,game.score2],[0,2]);check(game.matches.length,2,'Correction removes the unused decider');
 check((await call('/games/'+id+'/comments','POST',{text:'Agent comment'},agent)).status,200);
 const events=(await call('/state','GET',undefined,a.auth)).value.activity;
 check(events.some(e=>e.action==='comment.added' && e.agent==='Integration agent' && e.actor===a.user.id),true);
@@ -98,7 +122,7 @@ check(demo.status,400,'Demo login still requires its own challenge');
 check((await call('/auth/verify','POST',{email:a.email,code:'123456'})).status,401,'Demo code is not accepted by real login');
 const timestamp=new Date().toISOString();
 await query(db.database.from('bb_games').insert(Array.from({length:105},()=>({player1:a.user.id,player2:b.user.id,
-  score1:11,score2:7,date:'2026-10-08',notes:'Pagination fixture '+prefix,created_at:timestamp}))));
+  matches:[{score1:11,score2:7},{score1:11,score2:9}],date:'2026-10-08',notes:'Pagination fixture '+prefix,created_at:timestamp}))));
 const firstPage=await call('/state?player='+a.user.id,'GET',undefined,a.auth);check(firstPage.status,200);
 const page1=firstPage.value;
 check(page1.games.length,100);
@@ -151,4 +175,4 @@ check(readAttempts,3,'Transient read retries are bounded');
 readAttempts=0;
 await assert.rejects(readQuery(async()=>{readAttempts++;return {error:{message:'Permission denied'}};}),/Permission denied/);
 check(readAttempts,1,'Permission errors are never retried');
-console.log(`Passed ${checks} real InsForge/API checks on burntboard-test. Test data is isolated; production is untouched.`);
+console.log(`Passed ${checks} real InsForge/API checks on ${linked.project_name}. Test data is isolated; production is untouched.`);

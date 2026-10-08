@@ -2,7 +2,7 @@ FROM node:22-bookworm-slim
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
-COPY server.mjs prototype-server.mjs index.html client.js client.css favicon.svg demo-agent.md ./
+COPY series.mjs server.mjs prototype-server.mjs index.html client.js client.css favicon.svg demo-agent.md ./
 COPY server ./server
 COPY skills ./skills
 COPY images ./images

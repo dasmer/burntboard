@@ -16,13 +16,13 @@ export async function state(identity,requestedGame=null,cursors={},requestedPlay
   const cursor=(rows)=>rows.length===100 ? Buffer.from(JSON.stringify([rows.at(-1).created_at,rows.at(-1).id])).toString('base64url') : null;
   const pagination={games:cursor(games),activity:cursor(events)};
   if (requestedGame && !games.some(g=>g.id===requestedGame)) {
-    const extra=await readQuery(()=>db.database.from('bb_games').select('id,player1,player2,score1,score2,date,notes,revision,created_at').eq('id',requestedGame).limit(1));
+    const extra=await readQuery(()=>db.database.from('bb_games').select('id,player1,player2,score1,score2,matches,date,notes,revision,created_at').eq('id',requestedGame).limit(1));
     games.push(...extra);
   }
   const ids=games.map(g=>g.id);
   const {comments,reactions,history,subscriptions}=await readQuery(()=>db.database.rpc('bb_game_content',{p_games:ids,p_player:identity.user.id}));
   return {...totals,pagination,players:people.map(player),user:player(identity.user),keys:keys.map(k=>({id:k.id,label:k.label,createdAt:k.created_at,expiresAt:k.expires_at})),
-    activity:events.map(event),games:games.map(g=>({id:g.id,player1:g.player1,player2:g.player2,score1:g.score1,score2:g.score2,date:g.date,notes:g.notes,
+    activity:events.map(event),games:games.map(g=>({id:g.id,player1:g.player1,player2:g.player2,score1:g.score1,score2:g.score2,matches:g.matches,date:g.date,notes:g.notes,
       revision:g.revision,actor:g.player1,createdAt:g.created_at,history:history.filter(e=>e.game_id===g.id).map(event),
       comments:comments.filter(c=>c.game_id===g.id).map(c=>({id:c.id,actor:c.player_id,text:c.text,mentions:c.mentions,agent:c.agent,createdAt:c.created_at})),
       reactions:reactions.filter(r=>r.game_id===g.id).reduce((a,r)=>{(a[r.emoji] ||= []).push(r.player_id);return a;},{}),
