@@ -36,20 +36,38 @@ create table public.bb_sessions (
   revoked_at timestamptz
 );
 create index bb_sessions_player on public.bb_sessions(player_id);
+-- Completed best-of-three games only; reject extra matches after a sweep.
+create function public.bb_series_wins(matches jsonb, side integer) returns integer
+language plpgsql immutable strict set search_path=pg_catalog,public,pg_temp as $$
+declare m jsonb; a integer; b integer; wins1 integer:=0; wins2 integer:=0;
+begin
+  if jsonb_typeof(matches)<>'array' then return null; end if;
+  if jsonb_array_length(matches) not between 2 and 3 then return null; end if;
+  for m in select value from jsonb_array_elements(matches) loop
+    if wins1=2 or wins2=2 then return null; end if;
+    if jsonb_typeof(m->'score1') is distinct from 'number' or jsonb_typeof(m->'score2') is distinct from 'number'
+      or coalesce(m->>'score1','') !~ '^[0-9]{1,2}$' or coalesce(m->>'score2','') !~ '^[0-9]{1,2}$' then return null; end if;
+    a:=(m->>'score1')::integer; b:=(m->>'score2')::integer;
+    if not ((greatest(a,b)=11 and least(a,b)<=9) or (greatest(a,b)>=12 and abs(a-b)=2)) then return null; end if;
+    if a>b then wins1:=wins1+1; else wins2:=wins2+1; end if;
+  end loop;
+  if greatest(wins1,wins2)<>2 then return null; end if;
+  return case when side=1 then wins1 else wins2 end;
+end; $$;
+revoke all on function public.bb_series_wins(jsonb,integer) from public,anon,authenticated;
+grant execute on function public.bb_series_wins(jsonb,integer) to project_admin;
 create table public.bb_games (
   id uuid primary key default gen_random_uuid(),
   player1 uuid not null references public.bb_players(id),
   player2 uuid not null references public.bb_players(id),
-  score1 integer not null,
-  score2 integer not null,
+  matches jsonb not null,
+  score1 integer generated always as (public.bb_series_wins(matches,1)) stored not null,
+  score2 integer generated always as (public.bb_series_wins(matches,2)) stored not null,
   date date not null,
   notes text not null default '' check (length(notes) <= 240),
   revision integer not null default 1,
   created_at timestamptz not null default now(),
-  check (player1 <> player2),
-  check (score1 between 0 and 99 and score2 between 0 and 99),
-  check ((greatest(score1,score2) = 11 and least(score1,score2) <= 9) or
-    (greatest(score1,score2) > 11 and abs(score1-score2) = 2))
+  check (player1 <> player2)
 );
 create index bb_games_date on public.bb_games(date desc, created_at desc);
 create table public.bb_comments (
