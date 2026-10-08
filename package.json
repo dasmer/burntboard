@@ -4,6 +4,21 @@
   "private": true,
   "description": "Burnt office ping pong leaderboard",
   "scripts": {
-    "validate": "node validate.js"
+    "dev": "node --env-file-if-exists=.env.local server.mjs",
+    "test:prototype": "node prototype-test.mjs",
+    "validate": "node validate.js",
+    "start": "node server.mjs",
+    "dev:prototype": "node prototype-server.mjs",
+    "test": "npm run check && npm run validate && npm run test:prototype",
+    "check": "node test/syntax.mjs",
+    "test:integration": "node --env-file=.env.local test/integration.mjs"
+  },
+  "dependencies": {
+    "@insforge/sdk": "^1.5.2",
+    "resend": "^6.32.1",
+    "sharp": "^0.35.5"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
