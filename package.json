@@ -9,7 +9,8 @@
     "validate": "node validate.js",
     "start": "node server.mjs",
     "dev:prototype": "node prototype-server.mjs",
-    "test": "npm run check && npm run validate && npm run test:prototype && node test/series.mjs",
+    "test": "npm run check && npm run validate && npm run test:prototype && node test/series.mjs && node test/email-templates.mjs && node test/email-delivery.mjs",
+    "preview:emails": "node test/email-preview.mjs",
     "check": "node test/syntax.mjs",
     "test:integration": "node --env-file=.env.local test/integration.mjs"
   },
