@@ -15,12 +15,14 @@ export const config = {
   deliveryEnabled: process.env.APP_ENV === 'production' || process.env.EMAIL_DELIVERY_ENABLED !== 'false',
   environment: process.env.APP_ENV || 'test',
   trustProxy: process.env.TRUST_PROXY === 'true',
+  originSecret: process.env.ORIGIN_SECRET,
 };
 if (!config.url || !config.apiKey) throw new Error('Link an InsForge project or configure server credentials.');
 if (!['test','production'].includes(config.environment)) throw new Error('APP_ENV must be test or production.');
 if (config.environment === 'production' && !config.origin.startsWith('https://')) throw new Error('Production requires an HTTPS APP_ORIGIN.');
 if (config.environment === 'production' && (config.testSink || config.testRecipients.length)) throw new Error('Test email routing is forbidden in production.');
 if (config.environment === 'production' && (!config.resendKey || !config.otpSecret || config.otpSecret.length<32)) throw new Error('Production requires Resend and a strong OTP_SECRET.');
+if (config.trustProxy && (!config.originSecret || config.originSecret.length<32)) throw new Error('Trusted proxy headers require a strong ORIGIN_SECRET.');
 export const db = createAdminClient({baseUrl: config.url, apiKey: config.apiKey});
 export async function query(promise) {
   const {data,error} = await promise;
