@@ -7,6 +7,8 @@ This skill works only while the local demo server is running. No production serv
 
 Use JSON requests to ORIGIN/demo/api/v1 with `Authorization: Bearer KEY` and `Content-Type: application/json`.
 
+- GET /games/GAME_ID/share: participants can obtain a fictional public demo receipt and PNG card. Response includes `url`; the PNG is at `url/image.png`. Demo links reset when the server restarts and never read real accounts or games. Share only when the user asks.
+
 - GET /state: your identity (`user`), player IDs, games, standings inputs, activity, and your connection list. Confirm `user` is present before writing. Compute standings from games: wins descending, total points descending, losses ascending, username ascending.
 - POST /games: `{ "opponent": "PLAYER_ID", "matches": [{"score1": 11, "score2": 7}, {"score1": 11, "score2": 9}], "date": "2026-10-08", "notes": "optional" }`. Player 1 is the authenticated user. Demo clock is October 8, 2026. Only record matches authorized by the user; never guess opponent identity.
 - PATCH /games/GAME_ID: `{ "matches": [{"score1": 11, "score2": 9}, {"score1": 9, "score2": 11}, {"score1": 14, "score2": 12}], "notes": "optional", "revision": 1 }`. Only participants can correct a game. Read its current revision first; on conflict, refetch before trying again. Match history retains old and new scores.

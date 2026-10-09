@@ -13,6 +13,8 @@ Every match, comment, reaction, or subscription mutation requires an `Idempotenc
 
 ## Actions
 
+- `GET /games/GAME_ID/share`: participants can obtain an unlisted public game receipt and OG card. Anyone with this URL can read player display names, date, and scores; notes, comments, emails, photos, and activity stay private. Share this link only when the user asks. The response includes `url`; the PNG is at `url/image.png`. Score corrections update the receipt. Rotating the server signing secret invalidates existing links.
+
 - `GET /state`: players, latest games/activity, standings, your profile, and personal agent connections. For an older match, use `GET /state?game=GAME_ID`. Follow any pagination information in the response rather than assuming a partial list is complete.
 - `POST /games`: `{ "opponent": "PLAYER_ID", "matches": [{"score1": 11, "score2": 7}, {"score1": 11, "score2": 9}], "date": "YYYY-MM-DD", "notes": "optional" }`. Player 1 is you. Both players must have joined. Resolve ambiguous opponent names with the user. Play to 11, win by two; future dates are rejected.
 - `PATCH /games/GAME_ID`: `{ "matches": [{"score1": 11, "score2": 9}, {"score1": 9, "score2": 11}, {"score1": 14, "score2": 12}], "notes": "optional", "revision": 1 }`. Only participants can correct scores. Read the current revision; on 409 refetch and explain the change before retrying. Corrections preserve history and notify the other player.

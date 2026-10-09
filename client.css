@@ -320,6 +320,8 @@ svg {
   color: var(--green);
   margin-bottom: 10px;
 }
+.page-heading:has(.game-actions) { flex-wrap: wrap; }
+.game-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .page-heading p {
   margin-top: 9px;
   color: var(--muted);

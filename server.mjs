@@ -7,7 +7,8 @@ import {config,db,query,readQuery,rpc} from './server/config.mjs';
 import {identity,error,requestCode,verifyCode,cookie,hash,secret} from './server/auth.mjs';
 import {state} from './server/state.mjs';
 import {deliverOutbox} from './server/email.mjs';
-import {demoHandler} from './prototype-server.mjs';
+import {demoHandler,demoShare} from './prototype-server.mjs';
+import {gameShareURL,serveGameShare} from './game-share.mjs';
 const root=resolve('.');
 const allowed=new Set(['/index.html','/client.js','/client.css','/favicon.svg','/agent.md','/demo-agent.md','/series.mjs']);
 const mime={'.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.md':'text/markdown; charset=utf-8'};
@@ -18,6 +19,13 @@ async function jsonBody(req) {
   try {return raw?JSON.parse(raw):{};} catch {throw error('Invalid JSON.');}
 }
 const uuid=(value)=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+async function loadSharedGame(id) {
+  if(!uuid(id))return null;
+  const game=(await readQuery(()=>db.database.from('bb_games').select('id,player1,player2,score1,score2,matches,date,revision').eq('id',id).limit(1)))[0];
+  if(!game)return null;
+  const players=await readQuery(()=>db.database.from('bb_players').select('id,name').in('id',[game.player1,game.player2]).limit(2));
+  return {game,players};
+}
 function checkOrigin(req) {
   if (!['GET','HEAD','OPTIONS'].includes(req.method)) {
     const bearer=!!req.headers.authorization;
@@ -52,6 +60,14 @@ async function api(req,res,url) {
     return state(who,game,cursors,player);
   }
   if(!who) throw error('Sign in to continue.',401);
+  const share=/^\/games\/([^/]+)\/share$/.exec(path);
+  if(share && req.method==='GET') {
+    if(!uuid(share[1]))throw error('Game not found.',404);
+    const found=await loadSharedGame(share[1]);
+    if(!found)throw error('Game not found.',404);
+    if(![found.game.player1,found.game.player2].includes(who.user.id))throw error('Only participants can share this game.',403);
+    return {url:gameShareURL({origin:config.origin,id:share[1],key:config.otpSecret})};
+  }
   if(req.method==='POST' && path==='/auth/logout') {
     await rpc('bb_sign_out',{p_token:who.tokenHash});
     res.setHeader('Set-Cookie',cookie('',0));return {ok:true};
@@ -124,9 +140,11 @@ http.createServer(async(req,res)=>{
   res.setHeader('Content-Security-Policy',"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
   try {
     const url=new URL(req.url,'http://localhost');
+    if(await demoShare(req,res,config.origin))return;
+    if(await serveGameShare(req,res,{origin:config.origin,key:config.otpSecret,load:loadSharedGame}))return;
     if(url.pathname.startsWith('/demo/api/')) {
       req.url=req.url.replace(/^\/demo/,'');delete req.headers.cookie;
-      await demoHandler(req,res);return;
+      await demoHandler(req,res,config.origin);return;
     }
     if(url.pathname.startsWith('/api/')) {
       res.setHeader('Content-Type','application/json; charset=utf-8');
