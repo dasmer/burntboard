@@ -2,7 +2,7 @@
 
 The Burnt × Allowance ping pong clubhouse: match feed, flat comments with @mentions, one reaction per person per post, player cards, standings, activity history, and personal agent connections. No administrator features.
 
-## Local app and demo
+## Local app
 
 Node 22 or later:
 
@@ -12,7 +12,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Configure server credentials before starting. Open http://localhost:4173 for the real app connected to the selected backend; http://localhost:4173/demo shows the approved prototype with sample players and matches. The demo has its own in-memory API at /demo/api/v1, fixed demo code 123456, and reset control. It sends no email and never writes to the real backend. Demo state resets on restart and is shared within one server process.
+Configure server credentials before starting. Open http://localhost:4173 for the app connected to the selected backend. Use the isolated test project for synthetic users and games.
 
 ## Authentication and data
 
@@ -51,8 +51,8 @@ The app requires the Node server and uses InsForge hosting; GitHub Pages is reti
 2. Confirm the CLI link points to the existing production project before applying pending migrations with `npx -y @insforge/cli db migrations up --all`. Review migration order and data preservation; do not recreate tables, reset the environment marker, or seed production.
 3. Preserve the server-only INSFORGE_URL, INSFORGE_API_KEY, RESEND_API_KEY, OTP_SECRET, APP_ENV=production, HTTPS APP_ORIGIN, ORIGIN_SECRET, and TRUST_PROXY=true configuration. Production must omit EMAIL_TEST_SINK and EMAIL_TEST_RECIPIENTS. Keep secrets out of the frontend and image build; keep the player-photos bucket private.
 4. Update the existing compute service with `npx -y @insforge/cli compute deploy . --name burntboard --always-on --env-file .env.production`. HOST=0.0.0.0 and PORT=8080 are set in the image. Always-on keeps the email queue worker running between visits.
-5. Deploy `hosting/` with `npx -y @insforge/cli deployments deploy hosting` only when routing changes. Keep ORIGIN_SECRET identical on frontend and compute. The routing sends the client, API, /demo, photos, and skill to the same Node process. Vercel replaces the secret header; the server rejects direct requests without it before trusting visitor-IP headers. Preserve the domain configuration and www redirect. See [Vercel's documented proxy configuration](https://vercel.com/docs/routing/rewrites#restricting-your-origin-to-vercel-traffic).
-6. Verify HTTPS, app assets, anonymous API responses, direct-origin rejection, and /demo isolation. Keep synthetic game writes and email fixture checks in the test project.
+5. Deploy `hosting/` with `npx -y @insforge/cli deployments deploy hosting` only when routing changes. Keep ORIGIN_SECRET identical on frontend and compute. The routing sends the client, API, photos, and skill to the same Node process. Vercel replaces the secret header; the server rejects direct requests without it before trusting visitor-IP headers. Preserve the domain configuration and www redirect. See [Vercel's documented proxy configuration](https://vercel.com/docs/routing/rewrites#restricting-your-origin-to-vercel-traffic).
+6. Verify HTTPS, app assets, anonymous API responses, direct-origin rejection, and rejection of retired /demo routes. Keep synthetic game writes and email fixture checks in the test project.
 
 Production is linked as burntboard-production (e4bf0edf-79f4-47b0-ba08-a459cd6a7955). The compute service is b79824a0-7ffe-49a8-9806-9a79e7c8c11b. Credentials remain in ignored local configuration and encrypted hosting settings. Future releases update the existing compute service by name; deploy hosting/ only when routing changes. Neither deployment automatically follows GitHub merges.
 

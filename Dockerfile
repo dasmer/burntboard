@@ -3,7 +3,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends fonts-dejavu-co
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev --no-audit --no-fund
-COPY series.mjs game-share.mjs server.mjs prototype-server.mjs index.html client.js client.css favicon.svg demo-agent.md ./
+COPY series.mjs game-share.mjs server.mjs index.html client.js client.css favicon.svg ./
 COPY server ./server
 COPY skills ./skills
 COPY images ./images

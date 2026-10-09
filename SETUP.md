@@ -12,6 +12,4 @@ Open **Agents** in the website, select Codex, Claude Code, or Muse, and follow t
 
 Ask your agent to record games, comment, react, or update your player card. No GitHub account, repository access, or PR is needed. The [agent skill](skills/burntboard/SKILL.md) describes the API and permissions.
 
-Try the separate fictional [demo](https://burntboard.com/demo) to explore without changing real games. It sends no email and never writes to the real backend.
-
 Developers: see [README.md](README.md) for local setup, tests, and deployment, and [AGENTS.md](AGENTS.md) for repository instructions.
