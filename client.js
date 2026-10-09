@@ -1,4 +1,4 @@
-import {seriesScore} from "./series.mjs";
+import {seriesScore,matchLabel,matchWinner} from "./series.mjs";
 const isDemo = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
 const apiBase = isDemo ? "/demo/api/v1" : "/api/v1";
 const tokenStore = "bb_demo_token";
@@ -43,7 +43,6 @@ const icon = (n) =>
 let data = { players: [], games: [], activity: [], keys: [], user: null },
   feedFilter = "all",
   scope = "week",
-  ranking = "wins",
   activityFilter = "all",
   agentClient = "Codex",
   commentsOpen = new Set(),
@@ -103,20 +102,15 @@ function toast(text) {
   );
 }
 function stats(id, games = data.games) {
-  if (!isDemo && games === data.games && data.standings) return data.standings.all.find(p => p.id === id) || {played:0,wins:0,losses:0,points:0,rate:0};
+  if (!isDemo && games === data.games && data.standings) return data.standings.all.find(p => p.id === id) || {played:0,wins:0,losses:0,rate:0};
   const mine = games.filter((g) => [g.player1, g.player2].includes(id)),
     wins = mine.filter(
       (g) => (g.score1 > g.score2 ? g.player1 : g.player2) === id,
-    ).length,
-    points = mine.reduce(
-      (n, g) => n + g.matches.reduce((sum,m)=>sum+(g.player1===id?m.score1:m.score2),0),
-      0,
-    );
+    ).length;
   return {
     played: mine.length,
     wins,
     losses: mine.length - wins,
-    points,
     rate: mine.length ? Math.round((wins / mine.length) * 100) : 0,
   };
 }
@@ -127,17 +121,16 @@ function scoped() {
       (scope === "month" ? g.date >= (data.monthStart || "2026-10-01") : g.date >= (data.weekStart || "2026-10-04")),
   );
 }
-function board(games = null, mode = ranking, period = scope) {
+function board(games = null, period = scope) {
   return data.players
-    .map((p) => ({ ...p, ...(!isDemo && !games && data.standings ? data.standings[period].find(row=>row.id===p.id) || {played:0,wins:0,losses:0,points:0,rate:0} : stats(p.id, games || scoped())) }))
+    .map((p) => ({ ...p, ...(!isDemo && !games && data.standings ? data.standings[period].find(row=>row.id===p.id) || {played:0,wins:0,losses:0,rate:0} : stats(p.id, games || scoped())) }))
     .filter((p) => p.played)
     .sort(
       (a, b) =>
-        (mode === "points" ? b.points - a.points || b.wins - a.wins : b.wins - a.wins) ||
-        b.points - a.points ||
+        b.wins - a.wins ||
         a.losses - b.losses ||
         a.username.localeCompare(b.username),
-    );
+    ).map((p,i,rows)=>({...p,rank:1+rows.filter(q=>q.wins>p.wins || (q.wins===p.wins && q.losses<p.losses)).length}));
 }
 function form(id) {
   return data.games
@@ -159,37 +152,39 @@ function heading(
   return `<div class="page-heading"><div><div class="eyebrow">${eyebrow}</div><h1>${title}</h1><p>${subtitle}</p></div>${action || `<span class="date muted">${new Date(today + "T12:00:00Z").toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",timeZone:"UTC"})}</span>`}</div>`;
 }
 function rail() {
-  const rows = board(null, "wins", "week").slice(0, 4),
+  const rows = board(null, "week").slice(0, 4),
     me = data.user,
     s = me ? stats(me.id) : null;
-  return `<aside class="rail"><section class="panel"><div class="section-title"><h3>This week’s heat</h3><a href="#leaderboard">View all ${icon("arrow")}</a></div>${rows.map((p, i) => `<a class="mini-row" href="#profile/${p.id}"><span class="position">${i + 1}</span>${avatar(p)}<div><strong>${esc(first(p))}</strong><small>@${esc(p.username)}</small></div><div class="points">${p.wins}<small>WINS</small></div></a>`).join("")}<p class="tooltip-note">New week. Same bragging rights.</p></section><section class="panel quote-panel"><div class="eyebrow">HOUSE RULE NO. 01</div><h3>Talk is cheap.<br>Bring your paddle.</h3><p>Good games. Questionable serves.<br>Very real office rivalries.</p><div class="signature">EST. 2026 · BURNT × ALLOWANCE</div><span class="line-art">🏓</span></section>${me ? `<section class="panel"><div class="section-title"><h3>Your corner</h3><a href="#profile/${me.id}">Player card</a></div><div class="week-strip">${form(me.id)}</div><div class="your-stat"><div><span class="display">${s.wins}<span class="muted">–${s.losses}</span></span><small>ALL-TIME RECORD</small></div><span class="rating">${s.rate}% win rate</span></div></section>` : ""}<small style="text-align:center;font-size:10px">A little competition. A lot of character.</small></aside>`;
+  return `<aside class="rail"><section class="panel"><div class="section-title"><h3>This week’s heat</h3><a href="#leaderboard">View all ${icon("arrow")}</a></div>${rows.map((p, i) => `<a class="mini-row" href="#profile/${p.id}"><span class="position">${p.rank}</span>${avatar(p)}<div><strong>${esc(first(p))}</strong><small>@${esc(p.username)}</small></div><div class="points">${p.wins}<small>WINS</small></div></a>`).join("")}<p class="tooltip-note">New week. Same bragging rights.</p></section><section class="panel quote-panel"><div class="eyebrow">HOUSE RULE NO. 01</div><h3>Talk is cheap.<br>Bring your paddle.</h3><p>Good games. Questionable serves.<br>Very real office rivalries.</p><div class="signature">EST. 2026 · BURNT × ALLOWANCE</div><span class="line-art">🏓</span></section>${me ? `<section class="panel"><div class="section-title"><h3>Your corner</h3><a href="#profile/${me.id}">Player card</a></div><div class="week-strip">${form(me.id)}</div><div class="your-stat"><div><span class="display">${s.wins}<span class="muted">–${s.losses}</span></span><small>ALL-TIME RECORD</small></div><span class="rating">${s.rate}% win rate</span></div></section>` : ""}<small style="text-align:center;font-size:10px">A little competition. A lot of character.</small></aside>`;
 }
-function receipt(g) {
-  return `${g.score1}–${g.score2} (${g.matches.map(m=>`${m.score1}–${m.score2}`).join(", ")})`;
+function receipt(g,context=g) {
+  return `${g.score1}–${g.score2} (${g.matches.map(m=>esc(matchLabel(m,[first(player(context.player1)),first(player(context.player2))]))).join(", ")})`;
 }
 function matchScores(g) {
-  return `<div class="match-scores" aria-label="Individual match scores">${g.matches.map((m,i)=>`<span><small>MATCH ${i+1}</small><strong>${m.score1}–${m.score2}</strong></span>`).join("")}<small>BEST OF THREE</small></div>`;
+  return `<div class="match-scores" aria-label="Individual match scores">${g.matches.map((m,i)=>`<span><small>MATCH ${i+1}</small><strong>${esc(matchLabel(m,[first(player(g.player1)),first(player(g.player2))]))}</strong></span>`).join("")}<small>BEST OF THREE</small></div>`;
 }
-function matchInputs(matches, me, opponent) {
-  return [0,1,2].map(i=>{
-    const required=i<2 || matches.length===3;
-    return `<fieldset class="series-match" data-match="${i}" ${required?'':'hidden'}>
-      <legend>Match ${i+1}${i===2?' · the decider':''}</legend>
-      <div class="score-inputs"><div><label for="m${i}a">${esc(me)}</label>
-      <input id="m${i}a" name="m${i}a" type="number" min="0" max="99" value="${matches[i]?.score1??''}" ${required?'required':'disabled'}></div><span>:</span>
-      <div><label for="m${i}b">${esc(opponent)}</label>
-      <input id="m${i}b" name="m${i}b" type="number" min="0" max="99" value="${matches[i]?.score2??''}" ${required?'required':'disabled'}></div></div>
-    </fieldset>`;
-  }).join('');
+function matchInput(i,m,names) {
+  const mode=m?.type || 'exact';
+  return `<fieldset class="series-match" data-match="${i}" data-mode="${mode}"><legend>Match ${i+1}${i===2?' · the decider':''}</legend>${mode==='exact'?`<div class="score-inputs"><div><label for="m${i}a">${esc(names[0])}</label><input id="m${i}a" name="m${i}a" type="number" min="0" max="11" step="1" value="${m?.score1??''}"></div><span>:</span><div><label for="m${i}b">${esc(names[1])}</label><input id="m${i}b" name="m${i}b" type="number" min="0" max="11" step="1" value="${m?.score2??''}"></div></div><div class="score-options"><button type="button" data-action="match-mode" data-mode="deuce">⇄ Deuce finish</button><button type="button" data-action="match-mode" data-mode="unrecorded">ⓘ Forgot the score?</button></div><div class="match-error" role="alert" hidden><span>Reached deuce? Choose who won—no final score needed.</span><button type="button" class="quiet-link" data-action="match-mode" data-mode="deuce">Use deuce finish →</button></div>`:`<span class="result-tag ${mode==='deuce'?'deuce':''}">${mode==='deuce'?'Deuce finish':'Score not recorded'}</span><p class="field-hint">${mode==='deuce'?'Deuce, advantage, game. No final point total needed.':'That’s fine. Just tell us who took the match.'}</p><label>Who won?</label><div class="match-winners">${names.map((name,w)=>`<label><input type="radio" aria-label="${esc(name)}" name="winner${i}" value="${w+1}" ${m?.winner===w+1?'checked':''}><span>${esc(name)}</span></label>`).join('')}</div><button type="button" class="quiet-link" data-action="match-mode" data-mode="exact">↩ Enter exact score instead</button>`}</fieldset>`;
+}
+function matchInputs(matches,me,opponent) {
+  return [0,1,2].map(i=>matchInput(i,matches[i],[me,opponent])).join('');
+}
+function readMatch(row) {
+  if(row.dataset.mode!=='exact')return {type:row.dataset.mode,winner:Number(row.querySelector('input:checked')?.value)};
+  const inputs=[...row.querySelectorAll('input[type="number"]')];
+  return {score1:inputs[0].value===''?NaN:Number(inputs[0].value),score2:inputs[1].value===''?NaN:Number(inputs[1].value)};
 }
 function updateDecider(form) {
-  const firstTwo=[0,1].map(i=>[form.elements['m'+i+'a'].value,form.elements['m'+i+'b'].value]);
-  const split=firstTwo.every(([a,b])=>a!==''&&b!==''&&Number(a)!==Number(b)) && (Number(firstTwo[0][0])>Number(firstTwo[0][1]))!==(Number(firstTwo[1][0])>Number(firstTwo[1][1]));
-  const third=form.querySelector('[data-match="2"]');
-  third.hidden=!split;
-  third.querySelectorAll('input').forEach(input=>{input.required=split;input.disabled=!split;});
-  form.querySelector('.series-status').textContent=split?'One match each. Enter Match 3 to decide the game.':'First to two match wins takes the game. No third match after a sweep.';
+  const firstTwo=[0,1].map(i=>readMatch(form.querySelector(`[data-match="${i}"]`)));
+  const valid=m=>{try{return seriesScore([m,m]),true;}catch{return false;}};
+  const split=firstTwo.every(valid)&&matchWinner(firstTwo[0])!==matchWinner(firstTwo[1]);
+  const third=form.querySelector('[data-match="2"]');third.hidden=!split;
+  third.querySelectorAll('input').forEach(input=>{input.disabled=!split;});
+  form.querySelectorAll('fieldset[data-mode="exact"]').forEach(row=>{const m=readMatch(row),hint=row.querySelector('.match-error');hint.hidden=!(m.score1>11||m.score2>11||m.score1===10&&m.score2===10);});
+  form.querySelector('.series-status').textContent=split?'One match each. Match 3 decides the game.':firstTwo.every(valid)?'A sweep. No third match needed.':'First to two match wins takes the game.';
 }
+
 function scoreCard(g) {
   const p1 = player(g.player1),
     p2 = player(g.player2),
@@ -203,7 +198,7 @@ function post(g, { detail = false } = {}) {
   const author = player(g.actor),
     winner = player(g.score1 > g.score2 ? g.player1 : g.player2),
     loser = player(g.score1 > g.score2 ? g.player2 : g.player1);
-  return `<article class="post" id="post-${g.id}"><div class="post-head"><a href="#profile/${author.id}">${avatar(author)}</a><div class="meta"><a href="#profile/${author.id}"><strong>${esc(author.name)}</strong></a><p>@${esc(author.username)} · ${dateLabel(g.date)}${g.revision > 1 ? " · Edited" : ""}${g.history.find((e) => e.agent) ? " · via agent" : ""}</p></div><span class="tag ${g.matches.some(m=>Math.max(m.score1,m.score2)>11) ? "hot" : ""}">${g.matches.some(m=>Math.max(m.score1,m.score2)>11) ? "DEUCE DRAMA" : "GAME RECORDED"}</span></div><p class="post-copy"><strong>${esc(first(winner))}</strong> took the W against <strong>${esc(first(loser))}</strong>.${g.notes ? "<br>" + esc(g.notes) : ""}</p>${scoreCard(g)}${matchScores(g)}<div class="post-actions"><button data-action="reaction-picker" data-game="${g.id}" aria-label="Add reaction">${icon("smile")} React</button><div class="reaction-chips">${Object.entries(
+  return `<article class="post" id="post-${g.id}"><div class="post-head"><a href="#profile/${author.id}">${avatar(author)}</a><div class="meta"><a href="#profile/${author.id}"><strong>${esc(author.name)}</strong></a><p>@${esc(author.username)} · ${dateLabel(g.date)}${g.revision > 1 ? " · Edited" : ""}${g.history.find((e) => e.agent) ? " · via agent" : ""}</p></div><span class="tag ${g.matches.some(m=>m.type==='deuce') ? "hot" : ""}">${g.matches.some(m=>m.type==='deuce') ? "DEUCE DRAMA" : "GAME RECORDED"}</span></div><p class="post-copy"><strong>${esc(first(winner))}</strong> took the W against <strong>${esc(first(loser))}</strong>.${g.notes ? "<br>" + esc(g.notes) : ""}</p>${scoreCard(g)}${matchScores(g)}<div class="post-actions"><button data-action="reaction-picker" data-game="${g.id}" aria-label="Add reaction">${icon("smile")} React</button><div class="reaction-chips">${Object.entries(
     g.reactions,
   )
     .filter(([, v]) => v.length)
@@ -227,7 +222,7 @@ function empty(title, copy, button, action) {
 }
 function leaderboard() {
   const rows = board();
-  return `${heading("Bragging rights.", "Every point counts. Some people remind you more than others.", "THE LEADERBOARD")}<div class="filters"><div class="pill-tabs">${[
+  return `${heading("Bragging rights.", "Every game counts. Some people remind you more than others.", "THE LEADERBOARD")}<div class="filters"><div class="pill-tabs">${[
     ["week", "This week"],
     ["month", "This month"],
     ["all", "All-time"],
@@ -236,25 +231,17 @@ function leaderboard() {
       ([v, t]) =>
         `<button class="${scope === v ? "active" : ""}" data-action="scope" data-value="${v}">${t}</button>`,
     )
-    .join("")}</div><div class="pill-tabs">${[
-    ["wins", "By wins"],
-    ["points", "By points"],
-  ]
-    .map(
-      ([v, t]) =>
-        `<button class="${ranking === v ? "active" : ""}" data-action="ranking" data-value="${v}">${t}</button>`,
-    )
     .join("")}</div></div>${
     rows.length
       ? `<div class="podium">${rows
           .slice(0, 3)
           .map(
             (p, i) =>
-              `<a class="podium-card ${i === 0 ? "first" : ""}" href="#profile/${p.id}"><span class="place">0${i + 1}</span><span class="crown">${["👑", "🥈", "🥉"][i]}</span>${avatar(p, "large")}<h3>${esc(first(p))}</h3><small>@${esc(p.username)}</small><div class="wins">${ranking === "wins" ? p.wins : p.points}<small>${ranking === "wins" ? "wins this " + (scope === "all" ? "season" : scope) : "total points"}</small></div></a>`,
+              `<a class="podium-card ${p.rank === 1 ? "first" : ""}" href="#profile/${p.id}"><span class="place">${String(p.rank).padStart(2,"0")}</span><span class="crown">${["👑", "🥈", "🥉"][p.rank-1] || ""}</span>${avatar(p, "large")}<h3>${esc(first(p))}</h3><small>@${esc(p.username)}</small><div class="wins">${p.wins}<small>${"wins this " + (scope === "all" ? "season" : scope)}</small></div></a>`,
           )
           .join(
             "",
-          )}</div><section class="panel table-panel"><table class="leader-table"><thead><tr><th>#</th><th>Player</th><th>W</th><th>L</th><th>Win %</th><th class="hide-mobile">Points</th><th class="hide-mobile">Recent form</th></tr></thead><tbody>${rows.map((p, i) => `<tr class="${p.id === data.user?.id ? "self" : ""}"><td class="num muted">${i + 1}</td><td><a class="player-cell" href="#profile/${p.id}">${avatar(p)}<div><strong>${esc(p.name)}${p.id === data.user?.id ? ' <span class="orange">· you</span>' : ""}</strong><small>@${esc(p.username)}</small></div></a></td><td class="num">${p.wins}</td><td class="num muted">${p.losses}</td><td>${p.rate}%</td><td class="num hide-mobile">${p.points}</td><td class="hide-mobile"><div class="week-strip">${form(p.id)}</div></td></tr>`).join("")}</tbody></table></section><p class="tooltip-note">${scope === "week" ? "Week of " + dateLabel(data.weekStart || "2026-10-04") : scope === "month" ? dateLabel(data.monthStart || "2026-10-01") : "Since the first serve"} · ${ranking === "wins" ? "Ranked by wins, then points, then fewest losses." : "Ranked by total points, then wins, then fewest losses."}</p>`
+          )}</div><section class="panel table-panel"><table class="leader-table"><thead><tr><th>#</th><th>Player</th><th>W</th><th>L</th><th>Win %</th><th class="hide-mobile">Recent form</th></tr></thead><tbody>${rows.map((p, i) => `<tr class="${p.id === data.user?.id ? "self" : ""}"><td class="num muted">${p.rank}</td><td><a class="player-cell" href="#profile/${p.id}">${avatar(p)}<div><strong>${esc(p.name)}${p.id === data.user?.id ? ' <span class="orange">· you</span>' : ""}</strong><small>@${esc(p.username)}</small></div></a></td><td class="num">${p.wins}</td><td class="num muted">${p.losses}</td><td>${p.rate}%</td><td class="hide-mobile"><div class="week-strip">${form(p.id)}</div></td></tr>`).join("")}</tbody></table></section><p class="tooltip-note">${scope === "week" ? "Week of " + dateLabel(data.weekStart || "2026-10-04") : scope === "month" ? dateLabel(data.monthStart || "2026-10-01") : "Since the first serve"} · Ranked by game wins, then fewest losses. Equal records share a rank.</p>`
       : empty(
           "The crown is unclaimed.",
           "Be the first to put a game on the board.",
@@ -315,7 +302,7 @@ function match(id) {
         [x.player1, x.player2].includes(p2.id),
     ),
     s = !isDemo && data.rivalries ? data.rivalries.find(r=>r.id===p1.id && r.opponent===p2.id) || {played:0,wins:0,losses:0} : stats(p1.id, h2h);
-  return `${heading("The game receipt.", "The result. The rivalry. The full story.", "GAME DETAILS", mine ? `<div class="game-actions"><button class="btn soft" data-action="share-game" data-game="${id}">${icon("share")} Share game</button><button class="btn ghost" data-action="correct" data-game="${id}">${icon("edit")} Correct score</button></div>` : "")}<div class="columns"><div><section class="panel match-hero"><div class="eyebrow muted">${dateLabel(g.date)} · OFFICE TABLE · FINAL</div><div class="match-versus"><a class="competitor" href="#profile/${p1.id}">${avatar(p1, "large")}<h3>${esc(first(p1))}</h3><small>@${esc(p1.username)}</small></a><div class="display">${g.score1}<span class="muted"> : </span>${g.score2}</div><a class="competitor" href="#profile/${p2.id}">${avatar(p2, "large")}<h3>${esc(first(p2))}</h3><small>@${esc(p2.username)}</small></a></div>${matchScores(g)}<div class="badge" style="display:inline-block;margin-bottom:22px">${g.matches.some(m=>Math.max(m.score1,m.score2)>11) ? "🔥 Deuce drama" : "🏓 " + esc(first(g.score1 > g.score2 ? p1 : p2)) + " took the W"}</div>${g.notes ? `<p class="notes">“${esc(g.notes)}”</p>` : ""}</section><div style="margin-top:24px">${post(g, { detail: true })}</div></div><aside class="rail"><section class="panel"><h3>Head to head</h3><div class="rivalry"><span class="display">${s.wins} <span class="muted">—</span> ${s.losses}</span><small>${s.played} games played</small></div><div class="progress"><span style="width:${(s.wins / s.played) * 100}%"></span></div><div class="rival-labels"><span>${esc(first(p1))}</span><span>${esc(first(p2))}</span></div></section><section class="panel"><h3>The paper trail</h3><p class="tooltip-note" style="margin-bottom:15px">Every change. Every player. All here.</p>${g.history.map((e) => `<div class="history-item"><strong>${esc(first(player(e.actor)))}</strong> · ${esc(e.text)}${e.after?.score1 != null ? `<div class="tooltip-note">${e.before ? `${receipt(e.before)} → ` : ""}${receipt(e.after)}</div>` : ""}${e.agent ? `<small>via ${esc(e.agent)}</small>` : ""}<small>${dateLabel(e.createdAt.slice(0, 10))} · ${timeLabel(e.createdAt)}</small></div>`).join("")}</section></aside></div><section class="panel mobile-only" style="margin-top:20px"><h3>The paper trail</h3>${g.history.map((e) => `<div class="history-item"><strong>${esc(first(player(e.actor)))}</strong> · ${esc(e.text)}${e.after?.score1 != null ? `<div class="tooltip-note">${e.before ? `${receipt(e.before)} → ` : ""}${receipt(e.after)}</div>` : ""}<small>${timeLabel(e.createdAt)}${e.agent ? " · via " + esc(e.agent) : ""}</small></div>`).join("")}</section>`;
+  return `${heading("The game receipt.", "The result. The rivalry. The full story.", "GAME DETAILS", mine ? `<div class="game-actions"><button class="btn soft" data-action="share-game" data-game="${id}">${icon("share")} Share game</button><button class="btn ghost" data-action="correct" data-game="${id}">${icon("edit")} Correct score</button></div>` : "")}<div class="columns"><div><section class="panel match-hero"><div class="eyebrow muted">${dateLabel(g.date)} · OFFICE TABLE · FINAL</div><div class="match-versus"><a class="competitor" href="#profile/${p1.id}">${avatar(p1, "large")}<h3>${esc(first(p1))}</h3><small>@${esc(p1.username)}</small></a><div class="display">${g.score1}<span class="muted"> : </span>${g.score2}</div><a class="competitor" href="#profile/${p2.id}">${avatar(p2, "large")}<h3>${esc(first(p2))}</h3><small>@${esc(p2.username)}</small></a></div>${matchScores(g)}<div class="badge" style="display:inline-block;margin-bottom:22px">${g.matches.some(m=>m.type==='deuce') ? "🔥 Deuce drama" : "🏓 " + esc(first(g.score1 > g.score2 ? p1 : p2)) + " took the W"}</div>${g.notes ? `<p class="notes">“${esc(g.notes)}”</p>` : ""}</section><div style="margin-top:24px">${post(g, { detail: true })}</div></div><aside class="rail"><section class="panel"><h3>Head to head</h3><div class="rivalry"><span class="display">${s.wins} <span class="muted">—</span> ${s.losses}</span><small>${s.played} games played</small></div><div class="progress"><span style="width:${(s.wins / s.played) * 100}%"></span></div><div class="rival-labels"><span>${esc(first(p1))}</span><span>${esc(first(p2))}</span></div></section><section class="panel"><h3>The paper trail</h3><p class="tooltip-note" style="margin-bottom:15px">Every change. Every player. All here.</p>${g.history.map((e) => `<div class="history-item"><strong>${esc(first(player(e.actor)))}</strong> · ${esc(e.text)}${e.after?.score1 != null ? `<div class="tooltip-note">${e.before ? `${receipt(e.before,g)} → ` : ""}${receipt(e.after,g)}</div>` : ""}${e.agent ? `<small>via ${esc(e.agent)}</small>` : ""}<small>${dateLabel(e.createdAt.slice(0, 10))} · ${timeLabel(e.createdAt)}</small></div>`).join("")}</section></aside></div><section class="panel mobile-only" style="margin-top:20px"><h3>The paper trail</h3>${g.history.map((e) => `<div class="history-item"><strong>${esc(first(player(e.actor)))}</strong> · ${esc(e.text)}${e.after?.score1 != null ? `<div class="tooltip-note">${e.before ? `${receipt(e.before,g)} → ` : ""}${receipt(e.after,g)}</div>` : ""}<small>${timeLabel(e.createdAt)}${e.agent ? " · via " + esc(e.agent) : ""}</small></div>`).join("")}</section>`;
 }
 function activity() {
   const events = data.activity.filter(
@@ -466,7 +453,7 @@ function recordGame(opponent = "", game = null) {
   const me = game ? player(game.player1) : data.user,
     p2 = game?.player2 || opponent;
   modal(
-    `<div class="eyebrow orange">${game ? "KEEP THE RECEIPTS HONEST" : "PUT IT ON THE BOARD"}</div><h2>${game ? "Correct the score." : "How’d it go?"}</h2><p class="muted">${game ? "The original scores stay in the game history." : "Best of three matches. First to two wins takes the game."}</p><form data-form="game" ${game ? `data-game="${game.id}" data-revision="${game.revision}"` : ""}>${
+    `<div class="eyebrow orange">${game ? "KEEP THE RECEIPTS HONEST" : "PUT IT ON THE BOARD"}</div><h2>${game ? "Correct the score." : "How’d it go?"}</h2><p class="muted">${game ? "The original scores stay in the game history." : "Best of three matches. First to two wins takes the game."}</p><form data-form="game" novalidate data-player1name="${esc(first(me))}" data-player2name="${esc(game?first(player(p2)):p2?first(player(p2)):"Opponent")}" ${game ? `data-game="${game.id}" data-revision="${game.revision}"` : ""}>${
       game
         ? `<label>Your matchup</label><div class="code-block">${esc(me.name)} vs ${esc(player(p2).name)}</div>`
         : `<label for="opponent">Your opponent</label><select name="opponent" id="opponent" required><option value="">Choose a player…</option>${data.players
@@ -476,7 +463,7 @@ function recordGame(opponent = "", game = null) {
                 `<option value="${p.id}" ${p.id === p2 ? "selected" : ""}>${esc(p.name)} · @${esc(p.username)}</option>`,
             )
             .join("")}</select>`
-    }${matchInputs(game?.matches || [{score1:11,score2:7},{score1:11,score2:9}],first(me),game?first(player(p2)):"Their score")}<small class="field-hint">Play to 11. Win by two. Deuce scores are welcome.</small><p class="series-status field-hint"></p>${!game ? `<label for="date">When did you play?</label><input id="date" name="date" type="date" value="${today}" max="${today}" required>` : ""}<label for="notes">The story <span class="muted">· optional</span></label><textarea id="notes" name="notes" maxlength="240" placeholder="A rematch request. A humble brag. An unbelievable rally.">${esc(game?.notes || "")}</textarea><div class="form-error" role="alert"></div><div class="form-footer"><button class="btn ghost" type="button" data-action="close">Cancel</button><button class="btn primary" type="submit">${game ? "Save correction" : "Record game"} ${icon("check")}</button></div></form>`,
+    }${matchInputs(game?.matches || [{score1:11,score2:7},{score1:11,score2:9}],first(me),p2?first(player(p2)):"Opponent")}<small class="field-hint">Play to 11. Win by two. Choose Deuce finish once you reach 10–10.</small><p class="series-status field-hint"></p>${!game ? `<label for="date">When did you play?</label><input id="date" name="date" type="date" value="${today}" max="${today}" required>` : ""}<label for="notes">The story <span class="muted">· optional</span></label><textarea id="notes" name="notes" maxlength="240" placeholder="A rematch request. A humble brag. An unbelievable rally.">${esc(game?.notes || "")}</textarea><div class="form-error" role="alert"></div><div class="form-footer"><button class="btn ghost" type="button" data-action="close">Cancel</button><button class="btn primary" type="submit">${game ? "Save correction" : "Record game"} ${icon("check")}</button></div></form>`,
   );
   updateDecider(document.querySelector('form[data-form="game"]'));
 }
@@ -542,6 +529,11 @@ async function action(el) {
     case "copy-game-link":
       try {await navigator.clipboard.writeText(shareDraft.url);toast("Game link copied.");} catch {$('#share-url').select();toast("Select and copy the game link.");}
       break;
+    case "match-mode": {
+      const row=el.closest('[data-match]'),form=row.closest('form'),i=Number(row.dataset.match),names=[form.dataset.player1name,form.dataset.player2name];
+      const values={score1:form.elements['m'+i+'a']?.value??'',score2:form.elements['m'+i+'b']?.value??'',type:el.dataset.mode};
+      row.outerHTML=matchInput(i,values,names);form.querySelector(".form-error").textContent="";updateDecider(form);break;
+    }
     case "correct":
       recordGame(
         "",
@@ -558,10 +550,6 @@ async function action(el) {
       break;
     case "scope":
       scope = el.dataset.value;
-      render();
-      break;
-    case "ranking":
-      ranking = el.dataset.value;
       render();
       break;
     case "activity-filter":
@@ -720,8 +708,9 @@ document.addEventListener("submit", async (e) => {
         else toast("You’re in. Welcome back.");
         break;
       case "game":
-        const matches=[0,1,2].filter(i=>i<2 || !f.querySelector('[data-match="2"]').hidden).map(i=>({score1:Number(b['m'+i+'a']),score2:Number(b['m'+i+'b'])}));
-        for(const k of Object.keys(b)) if(/^m[0-2][ab]$/.test(k)) delete b[k];
+        for(const el of f.elements) if(!/^(m[0-2][ab]|winner[0-2])$/.test(el.name) && el.willValidate && !el.reportValidity())return;
+        const matches=[...f.querySelectorAll("[data-match]")].filter(row=>!row.hidden).map(row=>readMatch(row));
+        for(const k of Object.keys(b)) if(/^(m[0-2][ab]|winner[0-2])$/.test(k)) delete b[k];
         Object.assign(b,seriesScore(matches));
         if (f.dataset.game) b.revision = Number(f.dataset.revision);
         const fingerprint = JSON.stringify(b);
@@ -740,7 +729,7 @@ document.addEventListener("submit", async (e) => {
           closeModal();
           toast("Score corrected. History preserved.");
         } else {
-          const g = {id:result.id,player2:b.opponent,score1:b.score1,score2:b.score2,matches:b.matches},
+          const g = {id:result.id,player1:data.user.id,player2:b.opponent,score1:b.score1,score2:b.score2,matches:b.matches},
             opp = player(g.player2);
           modal(
             `<div class="success"><div class="success-ball">🏓</div><div class="eyebrow orange">IT’S ON THE BOARD</div><h2>Good game. Great receipt.</h2><p>${esc(first(data.user))} vs ${esc(first(opp))}</p><div class="result">${g.score1} : ${g.score2}</div>${matchScores(g)}<p>Your standings and the feed are up to date.</p><button class="btn primary full" data-action="share-game" data-game="${g.id}">${icon("share")} Share game</button><button class="btn soft full" style="margin-top:10px" data-action="rematch" data-opponent="${opp.id}">Record rematch</button><a href="#match/${g.id}" class="btn soft full" data-action="close">View game</a></div>`,
@@ -806,6 +795,14 @@ document.addEventListener("change", async (e) => {
   });
   profileDraft.image = image;
   $("#photo-preview").innerHTML = avatar(profileDraft, "large");
+});
+document.addEventListener("change",e=>{
+  const f=e.target.closest('form[data-form="game"]');if(!f)return;
+  if(e.target.name.startsWith('winner'))updateDecider(f);
+  if(e.target.name==='opponent'){
+    f.dataset.player2name=first(player(e.target.value));
+    [...f.querySelectorAll('[data-match]')].forEach(row=>{row.outerHTML=matchInput(Number(row.dataset.match),readMatch(row),[f.dataset.player1name,f.dataset.player2name]);});updateDecider(f);
+  }
 });
 document.addEventListener("input", (e) => {
   if(e.target.closest('form[data-form="game"]') && /^m[0-2][ab]$/.test(e.target.name)) updateDecider(e.target.form);

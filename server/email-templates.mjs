@@ -1,3 +1,4 @@
+import {matchLabel} from '../series.mjs';
 // Inline styles and presentation tables keep the essentials intact in email clients.
 export const escapeEmail = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const heading = 'font-family:Arial,Helvetica,sans-serif;font-weight:900;letter-spacing:-1px;';
@@ -43,7 +44,7 @@ export function activityEmail({origin,payload,actorName,recipientId,player1Name=
   const e=escapeEmail, agent=payload.action==='agent.connected', comment=payload.action==='comment.added';
   const link=agent?`${origin}/#agents`:`${origin}/#match/${payload.gameId}`;
   const score=payload.after,before=payload.before;
-  const scores=s=>`${s.score1}–${s.score2} (${s.matches.map(m=>`${m.score1}–${m.score2}`).join(', ')})`;
+  const scores=s=>`${s.score1}–${s.score2} (${s.matches.map(m=>matchLabel(m,[player1Name,player2Name])).join(', ')})`;
   const message=agent?`A new agent connection, ${payload.label}, was created for your account. Disconnect it on the Agents page if you did not create it.`:
     comment?`${actorName} commented: ${payload.text}`:
     `${actorName} ${before?`corrected the score from ${scores(before)} to`:'recorded a best-of-three game:'} ${scores(score)}.`;
@@ -54,7 +55,7 @@ export function activityEmail({origin,payload,actorName,recipientId,player1Name=
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#edf1eb" style="margin:0 0 24px;border:1px solid #d9e1d5;border-radius:10px;table-layout:fixed;">
 <tr><td width="38%" align="center" style="padding:22px 8px 8px;color:#557566;font-size:12px;font-weight:bold;word-break:break-word;">${e(player1Name)}</td><td width="24%" align="center" style="padding:22px 0 8px;font-size:10px;font-weight:bold;color:#767970;">BEST OF THREE</td><td width="38%" align="center" style="padding:22px 8px 8px;color:#557566;font-size:12px;font-weight:bold;word-break:break-word;">${e(player2Name)}</td></tr>
 <tr><td align="center" style="${heading}padding:0 8px 12px;font-size:48px;">${e(score.score1)}</td><td align="center" style="font-size:24px;color:#767970;">–</td><td align="center" style="${heading}padding:0 8px 12px;font-size:48px;">${e(score.score2)}</td></tr>
-<tr><td colspan="3" align="center" style="padding:0 12px 22px;font-size:13px;line-height:1.7;color:#55594f;">${score.matches.map((m,i)=>`Match ${i+1}: <strong>${e(m.score1)}–${e(m.score2)}</strong>`).join(' &nbsp;·&nbsp; ')}${before?`<br><span style="color:#767970;">Previously: ${e(scores(before))}</span>`:''}</td></tr></table>`;
+<tr><td colspan="3" align="center" style="padding:0 12px 22px;font-size:13px;line-height:1.7;color:#55594f;">${score.matches.map((m,i)=>`Match ${i+1}: <strong>${e(matchLabel(m,[player1Name,player2Name]))}</strong>`).join(' &nbsp;·&nbsp; ')}${before?`<br><span style="color:#767970;">Previously: ${e(scores(before))}</span>`:''}</td></tr></table>`;
   return {
     text:`${message}\n\n${agent?'Manage agent connection':'View game'}: ${link}\n${agent?'':'Manage email preferences in your Burntboard profile.'}`.trim(),
     html:frame({origin,preheader:message,kicker:agent?'YOUR AGENT CONNECTION':comment?'FROM THE SIDELINES':'ON THE BOARD',

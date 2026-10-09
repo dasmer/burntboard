@@ -1,3 +1,4 @@
+import {matchWinner} from '../series.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {randomUUID,createHmac} from 'node:crypto';
@@ -38,7 +39,7 @@ check((await call('/state')).value.players,[],'Anonymous users cannot read clubh
 check((await call('/auth/request','POST',{email:'outsider@example.com'})).status,400);
 check((await call('/auth/request','POST',{email:'bob@am.useallowance.com'})).status,400,'Test sink does not expand signup allowlist');
 const body={opponent:b.user.id,matches:[{score1:11,score2:7},{score1:11,score2:9}],date:'2026-10-08',notes:'Integration test'};
-const win=body.matches[0],loss={score1:9,score2:11},deuce={score1:14,score2:12};
+const win=body.matches[0],loss={score1:9,score2:11},deuce={type:'deuce',winner:1};
 for(const matches of [undefined,[],[win],[win,loss],[win,win,loss],[loss,loss,win],
   [win,{score1:11,score2:10}],[win,{score1:13,score2:10}],[win,null]]) {
   check((await call('/games','POST',{...body,matches},a.auth)).status,400,'Reject invalid or unfinished series');
@@ -48,7 +49,7 @@ for(const matches of [undefined,[],[win],[win,loss],[win,win,loss],[loss,loss,wi
   }
 }
 for(const matches of [[win,win],[loss,loss],[win,loss,deuce],[loss,win,loss]]) {
-  check(await rpc('bb_series_wins',{matches,side:1}),matches.filter(m=>m.score1>m.score2).length,'SQL series validator agrees with match winners');
+  check(await rpc('bb_series_wins',{matches,side:1}),matches.filter(m=>matchWinner(m)===1).length,'SQL series validator agrees with match winners');
 }
 const key=randomUUID();
 const recorded=await call('/games','POST',body,a.auth,key);check(recorded.status,200);
@@ -83,9 +84,9 @@ game=seriesState.games.find(g=>g.id===id);
 check([game.score1,game.score2],[2,1]);check(game.matches,[win,loss,deuce]);
 const correctedReceipt=await (await fetch(shared.value.url)).text();
 check(correctedReceipt.includes('/image.png?v=3'),true,'Corrections version the OG image');
-check(correctedReceipt.includes('14–12'),true,'The shared receipt reflects the corrected deciding match');
+check(correctedReceipt.includes('won in deuce'),true,'The shared receipt reflects the corrected deciding match');
 check(seriesState.standings.all.find(p=>p.id===a.user.id).wins,1,'A three-match game counts as one win');
-check(seriesState.standings.all.find(p=>p.id===a.user.id).points,34,'Points include all individual matches');
+check('points' in seriesState.standings.all.find(p=>p.id===a.user.id),false,'Incomplete point totals are not ranked');
 const scoreEmail=(await query(db.database.from('bb_outbox').select('payload').eq('payload->>gameId',id).eq('payload->>action','game.corrected').order('created_at',{ascending:false}).limit(1)))[0];
 check(scoreEmail.payload.after.matches,[win,loss,deuce],'Notification preserves all match scores');
 await call('/me','PATCH',{username:prefix+'c',name:'Mention test C'},c.auth);
@@ -115,6 +116,18 @@ game=(await call('/state','GET',undefined,a.auth)).value.games.find(g=>g.id===id
 check(Object.values(game.reactions).flat().includes(a.user.id),false);
 const connection=await call('/agent-keys','POST',{label:'Integration agent'},a.auth);check(connection.status,200);
 const agent={Authorization:'Bearer '+connection.value.token};
+const unrecorded={type:'unrecorded',winner:2};
+const mixed=await call('/games','POST',{...body,matches:[win,unrecorded,deuce]},agent);check(mixed.status,200,'Agent records mixed result types');
+const mixedGame=(await call('/state','GET',undefined,a.auth)).value.games.find(g=>g.id===mixed.value.id);
+check(mixedGame.matches,[win,unrecorded,deuce]);check([mixedGame.score1,mixedGame.score2],[2,1]);
+check((await call('/games/'+mixed.value.id,'PATCH',{matches:[win,win],revision:1},c.auth)).status,403);
+const mixedShare=await call('/games/'+mixed.value.id+'/share','GET',undefined,agent);
+const mixedHTML=await (await fetch(mixedShare.value.url)).text();check(mixedHTML.includes('Score not recorded'),true);check(mixedHTML.includes('won in deuce'),true);check(mixedHTML.includes('undefined'),false);
+for(const invalid of [{type:'deuce',winner:3},{type:'unrecorded',winner:1,score1:11},{score1:13,score2:11}]) {
+  check((await call('/games','POST',{...body,matches:[win,invalid]},agent)).status,400);
+  check(await rpc('bb_series_wins',{matches:[win,invalid],side:1}),null,'Database rejects invalid match types independently');
+}
+check(await rpc('bb_series_wins',{matches:[win,unrecorded,deuce],side:1}),2);
 check((await call('/games/'+id+'/share','GET',undefined,agent)).value.url,shared.value.url,'Agents have the same participant sharing capability');
 check((await call('/state','GET',undefined,agent)).value.user.id,a.user.id);
 check((await call('/me','PATCH',{bio:'Updated via agent'},agent)).status,200);
@@ -144,10 +157,10 @@ const page1=firstPage.value;
 check(page1.games.length,100);
 const nextPage=await call('/state?player='+a.user.id+'&gamesBefore='+encodeURIComponent(page1.pagination.games),'GET',undefined,a.auth);check(nextPage.status,200);
 const page2=nextPage.value;
-check(page2.games.length,6,'Same-timestamp pagination must not lose games');
-check(new Set([...page1.games,...page2.games].map(g=>g.id)).size,106);
-check(page1.standings.all.find(p=>p.id===a.user.id).played,106,'Standings include games beyond the first page');
-check(page1.rivalries.find(r=>r.id===a.user.id && r.opponent===b.user.id).played,106);
+check(page2.games.length,7,'Same-timestamp pagination must not lose games');
+check(new Set([...page1.games,...page2.games].map(g=>g.id)).size,107);
+check(page1.standings.all.find(p=>p.id===a.user.id).played,107,'Standings include games beyond the first page');
+check(page1.rivalries.find(r=>r.id===a.user.id && r.opponent===b.user.id).played,107);
 check((await call('/state?gamesBefore=invalid','GET',undefined,a.auth)).status,400);
 const image='data:image/png;base64,'+(await sharp({create:{width:8,height:8,channels:3,background:'#739783'}}).png().toBuffer()).toString('base64');
 check((await call('/me','PATCH',{image},a.auth)).status,200,'Photo is decoded and stored in private InsForge storage');

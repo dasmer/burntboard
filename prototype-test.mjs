@@ -77,7 +77,7 @@ try {
     "POST",
     {
       opponent: "ben",
-      matches:[{score1:14,score2:12},{score1:9,score2:11},{score1:11,score2:7}],
+      matches:[{type:'deuce',winner:1},{score1:9,score2:11},{score1:11,score2:7}],
       date: "2026-10-08",
       notes: "A deuce finish",
     },
@@ -132,7 +132,7 @@ try {
   let s = (await call("/state", "GET", undefined, dasmer)).body,
     g = s.games.find((g) => g.id === id);
   check(g.history.length, 2);
-  check(g.history[0].before.matches[0].score1, 14);
+  check(g.history[0].before.matches[0].type, 'deuce');
   check(g.score2, 0);
   check(g.matches.length,2);
   check(
