@@ -9,6 +9,7 @@ import {state} from './server/state.mjs';
 import {deliverOutbox} from './server/email.mjs';
 import {demoHandler,demoShare} from './prototype-server.mjs';
 import {gameShareURL,serveGameShare} from './game-share.mjs';
+import {checkProxy,clientIp} from './server/proxy.mjs';
 const root=resolve('.');
 const allowed=new Set(['/index.html','/client.js','/client.css','/favicon.svg','/agent.md','/demo-agent.md','/series.mjs']);
 const mime={'.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.md':'text/markdown; charset=utf-8'};
@@ -38,8 +39,7 @@ async function api(req,res,url) {
   checkOrigin(req);
   const body=await jsonBody(req), path=url.pathname.slice('/api/v1'.length);
   if(req.method==='POST' && path==='/auth/request') {
-    const ip=config.trustProxy ? String(req.headers['x-forwarded-for'] || '').split(',').at(-1).trim() : '';
-    return requestCode(body,ip || req.socket.remoteAddress || 'unknown');
+    return requestCode(body,clientIp(req,config.trustProxy));
   }
   if(req.method==='POST' && path==='/auth/verify') return verifyCode(body,res);
   const who=await identity(req);
@@ -139,6 +139,7 @@ http.createServer(async(req,res)=>{
   res.setHeader('Cache-Control','no-store');
   res.setHeader('Content-Security-Policy',"default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
   try {
+    checkProxy(req,config.originSecret);
     const url=new URL(req.url,'http://localhost');
     if(await demoShare(req,res,config.origin))return;
     if(await serveGameShare(req,res,{origin:config.origin,key:config.otpSecret,load:loadSharedGame}))return;
