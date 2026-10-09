@@ -2,7 +2,7 @@ name: Validate Burntboard
 
 on:
   push:
-    branches: ["**"]
+    branches: ["main"]
   pull_request:
     branches: ["**"]
 
@@ -24,5 +24,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check syntax, archive data, and isolated demo
+      - name: Check syntax, app behavior, and isolated demo
         run: npm test
