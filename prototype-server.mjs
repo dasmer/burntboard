@@ -94,7 +94,7 @@ function seed() {
     id: `match-${i + 1}`,
     player1: p[0],
     player2: p[1],
-    ...seriesScore(i % 2 ? [{score1:p[2],score2:p[3]},{score1:p[3],score2:p[2]},{score1:p[2],score2:p[3]}] : [{score1:p[2],score2:p[3]},{score1:p[2],score2:p[3]}]),
+    ...seriesScore(i % 2 ? [(Math.max(p[2],p[3])>11?{type:'deuce',winner:p[2]>p[3]?1:2}:{score1:p[2],score2:p[3]}),(Math.max(p[2],p[3])>11?{type:'deuce',winner:p[3]>p[2]?1:2}:{score1:p[3],score2:p[2]}),(Math.max(p[2],p[3])>11?{type:'deuce',winner:p[2]>p[3]?1:2}:{score1:p[2],score2:p[3]})] : [(Math.max(p[2],p[3])>11?{type:'deuce',winner:p[2]>p[3]?1:2}:{score1:p[2],score2:p[3]}),(Math.max(p[2],p[3])>11?{type:'deuce',winner:p[2]>p[3]?1:2}:{score1:p[2],score2:p[3]})]),
     notes: p[4],
     date: `2026-10-${i < 4 ? "08" : i < 7 ? "07" : "02"}`,
     createdAt: new Date(Date.UTC(2026, 9, 8, 19 - i)).toISOString(),
