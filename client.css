@@ -496,7 +496,44 @@ svg {
   padding: 21px 24px;
   margin-bottom: 18px;
   animation: rise 0.35s both;
+  position: relative;
 }
+.reaction-takeover {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  background: var(--reaction-wash);
+  color: var(--reaction-tone);
+  isolation: isolate;
+}
+.reaction-center {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  padding: 20px;
+  text-align: center;
+}
+.reaction-hero {
+  font-size: clamp(85px, 19vw, 145px);
+  line-height: 1.1;
+  filter: drop-shadow(0 16px 28px #0002);
+}
+.reaction-title {
+  margin-top: 14px;
+  font-family: 'Barlow Condensed', sans-serif;
+  font-weight: 800;
+  font-size: clamp(32px, 8vw, 60px);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.reaction-caption { margin-top: 14px; font-size: 9px; letter-spacing: 2px; opacity: .65; }
+.reaction-speck { position: absolute; line-height: 1; z-index: 1; }
+.reaction-halo { position: absolute; width: 260px; height: 260px; border: 2px solid currentColor; border-radius: 50%; }
 .post-head {
   display: flex;
   align-items: center;
