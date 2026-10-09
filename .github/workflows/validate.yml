@@ -8,7 +8,7 @@ on:
 
 jobs:
   validate:
-    name: Validate app and demo
+    name: Validate app
     runs-on: ubuntu-latest
 
     steps:
@@ -24,5 +24,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check syntax, app behavior, and isolated demo
+      - name: Check syntax and app behavior
         run: npm test

@@ -7,11 +7,10 @@ import {config,db,query,readQuery,rpc} from './server/config.mjs';
 import {identity,error,requestCode,verifyCode,cookie,hash,secret} from './server/auth.mjs';
 import {state} from './server/state.mjs';
 import {deliverOutbox} from './server/email.mjs';
-import {demoHandler,demoShare} from './prototype-server.mjs';
 import {gameShareURL,serveGameShare} from './game-share.mjs';
 import {checkProxy,clientIp} from './server/proxy.mjs';
 const root=resolve('.');
-const allowed=new Set(['/index.html','/client.js','/client.css','/favicon.svg','/agent.md','/demo-agent.md','/series.mjs']);
+const allowed=new Set(['/index.html','/client.js','/client.css','/favicon.svg','/agent.md','/series.mjs']);
 const mime={'.mjs':'text/javascript; charset=utf-8','.html':'text/html; charset=utf-8','.css':'text/css; charset=utf-8','.js':'text/javascript; charset=utf-8','.svg':'image/svg+xml','.jpg':'image/jpeg','.png':'image/png','.md':'text/markdown; charset=utf-8'};
 async function jsonBody(req) {
   const chunks=[];let size=0;
@@ -141,19 +140,14 @@ http.createServer(async(req,res)=>{
   try {
     checkProxy(req,config.originSecret);
     const url=new URL(req.url,'http://localhost');
-    if(await demoShare(req,res,config.origin))return;
     if(await serveGameShare(req,res,{origin:config.origin,key:config.otpSecret,load:loadSharedGame}))return;
-    if(url.pathname.startsWith('/demo/api/')) {
-      req.url=req.url.replace(/^\/demo/,'');delete req.headers.cookie;
-      await demoHandler(req,res,config.origin);return;
-    }
     if(url.pathname.startsWith('/api/')) {
       res.setHeader('Content-Type','application/json; charset=utf-8');
       const result=await api(req,res,url);if(!res.writableEnded) res.end(JSON.stringify(result));return;
     }
     let path=url.pathname;
-    if(path==='/' || path==='/demo' || path==='/demo/') path='/index.html';
-    if(!allowed.has(path) && !/^\/images\/players\/[a-zA-Z0-9_-]+\.(jpg|png)$/.test(path) && path!=='/images/burnttable.jpg') throw error('Not found.',404);
+    if(path==='/') path='/index.html';
+    if(!allowed.has(path) && path!=='/images/burnttable.jpg') throw error('Not found.',404);
     const bytes=await readFile(resolve(root,path==='/agent.md'?'skills/burntboard/SKILL.md':'.'+path)).catch(()=>{throw error('Not found.',404);});
     res.setHeader('Content-Type',mime[extname(path)] || 'application/octet-stream');res.end(bytes);
   } catch(e) {

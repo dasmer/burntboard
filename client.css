@@ -295,15 +295,6 @@ svg {
   align-items: center;
   gap: 18px;
 }
-.demo-tag {
-  font-size: 10px;
-  border: 1px solid #d9d8cc;
-  border-radius: 5px;
-  padding: 4px 8px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  color: #7b7e70;
-}
 .content {
   padding: 34px 43px 50px;
   max-width: 1420px;
@@ -1398,14 +1389,6 @@ select {
   color: var(--muted);
   margin-top: 6px;
 }
-.otp-demo {
-  padding: 10px 13px;
-  background: #eaf0e0;
-  border-radius: 8px;
-  font-size: 11px;
-  color: #61754e;
-  margin: 15px 0;
-}
 .otp-input {
   text-align: center;
   font-size: 25px;
@@ -1697,10 +1680,6 @@ select {
   }
   .topbar-right {
     gap: 10px;
-  }
-  .demo-tag {
-    font-size: 8px;
-    padding: 3px 5px;
   }
   .content {
     padding: 25px 18px 32px;

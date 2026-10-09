@@ -1,8 +1,6 @@
 import {seriesScore,matchLabel,matchWinner} from "./series.mjs";
-const isDemo = location.pathname === "/demo" || location.pathname.startsWith("/demo/");
-const apiBase = isDemo ? "/demo/api/v1" : "/api/v1";
-const tokenStore = "bb_demo_token";
-const today = isDemo ? "2026-10-08" : new Intl.DateTimeFormat("en-CA", {timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+const apiBase = "/api/v1";
+const today = new Intl.DateTimeFormat("en-CA", {timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 const $ = (s) => document.querySelector(s),
   esc = (s) =>
     String(s ?? "").replace(
@@ -77,7 +75,6 @@ async function api(path, method = "GET", body, requestKey = crypto.randomUUID())
     method,
     headers: {
       "Content-Type": "application/json",
-      ...(isDemo ? {Authorization: "Bearer " + (localStorage.getItem(tokenStore) || "")} : {}),
       ...(method !== "GET" ? {"Idempotency-Key": requestKey} : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
@@ -89,7 +86,7 @@ async function api(path, method = "GET", body, requestKey = crypto.randomUUID())
 async function refresh() {
   const matchId = location.hash.startsWith("#match/") ? location.hash.slice(7) : null;
   const playerId = location.hash.startsWith("#profile/") ? location.hash.slice(9) : null;
-  data = await api("/state" + (!isDemo && (matchId || playerId) ? "?" + (matchId ? "game=" + encodeURIComponent(matchId) : "player=" + encodeURIComponent(playerId)) : ""));
+  data = await api("/state" + ((matchId || playerId) ? "?" + (matchId ? "game=" + encodeURIComponent(matchId) : "player=" + encodeURIComponent(playerId)) : ""));
   render();
 }
 function toast(text) {
@@ -102,7 +99,7 @@ function toast(text) {
   );
 }
 function stats(id, games = data.games) {
-  if (!isDemo && games === data.games && data.standings) return data.standings.all.find(p => p.id === id) || {played:0,wins:0,losses:0,rate:0};
+  if (games === data.games && data.standings) return data.standings.all.find(p => p.id === id) || {played:0,wins:0,losses:0,rate:0};
   const mine = games.filter((g) => [g.player1, g.player2].includes(id)),
     wins = mine.filter(
       (g) => (g.score1 > g.score2 ? g.player1 : g.player2) === id,
@@ -123,7 +120,7 @@ function scoped() {
 }
 function board(games = null, period = scope) {
   return data.players
-    .map((p) => ({ ...p, ...(!isDemo && !games && data.standings ? data.standings[period].find(row=>row.id===p.id) || {played:0,wins:0,losses:0,rate:0} : stats(p.id, games || scoped())) }))
+    .map((p) => ({ ...p, ...(!games && data.standings ? data.standings[period].find(row=>row.id===p.id) || {played:0,wins:0,losses:0,rate:0} : stats(p.id, games || scoped())) }))
     .filter((p) => p.played)
     .sort(
       (a, b) =>
@@ -208,7 +205,7 @@ function post(g, { detail = false } = {}) {
     )
     .join(
       "",
-    )}</div><button data-action="comments" data-game="${g.id}" aria-label="Show comments">${icon("comment")} ${g.comments.length || "Comment"}</button>${[g.player1,g.player2].includes(data.user?.id) ? `<button data-action="share-game" data-game="${g.id}">${icon("share")} Share</button>` : ""}${!detail ? `<a class="details muted" href="#match/${g.id}">Game details ${icon("arrow")}</a>` : ""}${!isDemo && data.user ? `<button class="muted" data-action="subscription" data-game="${g.id}" data-muted="${g.muted}">${g.muted ? "Unmute emails" : "Mute emails"}</button>` : ""}</div>${reactionOpen === g.id ? `<div class="reaction-picker">${["🔥", "🏓", "😂", "👏", "😤"].map((emoji) => `<button data-action="react" data-game="${g.id}" data-emoji="${emoji}" aria-label="React ${emoji}">${emoji}</button>`).join("")}</div>` : ""}${detail || commentsOpen.has(g.id) ? commentList(g) : ""}</article>`;
+    )}</div><button data-action="comments" data-game="${g.id}" aria-label="Show comments">${icon("comment")} ${g.comments.length || "Comment"}</button>${[g.player1,g.player2].includes(data.user?.id) ? `<button data-action="share-game" data-game="${g.id}">${icon("share")} Share</button>` : ""}${!detail ? `<a class="details muted" href="#match/${g.id}">Game details ${icon("arrow")}</a>` : ""}${data.user ? `<button class="muted" data-action="subscription" data-game="${g.id}" data-muted="${g.muted}">${g.muted ? "Unmute emails" : "Mute emails"}</button>` : ""}</div>${reactionOpen === g.id ? `<div class="reaction-picker">${["🔥", "🏓", "😂", "👏", "😤"].map((emoji) => `<button data-action="react" data-game="${g.id}" data-emoji="${emoji}" aria-label="React ${emoji}">${emoji}</button>`).join("")}</div>` : ""}${detail || commentsOpen.has(g.id) ? commentList(g) : ""}</article>`;
 }
 function feed() {
   let games = data.games.filter(
@@ -270,12 +267,12 @@ function profile(id) {
       .filter((o) => o.id !== id)
       .map((o) => ({
         ...o,
-        count: !isDemo && data.rivalries ? data.rivalries.find(r=>r.id===id && r.opponent===o.id)?.played || 0 : games.filter((g) => [g.player1, g.player2].includes(o.id)).length,
+        count: data.rivalries ? data.rivalries.find(r=>r.id===id && r.opponent===o.id)?.played || 0 : games.filter((g) => [g.player1, g.player2].includes(o.id)).length,
       }))
       .sort((a, b) => b.count - a.count),
     rival = opponents[0],
     h2h = games.filter((g) => [g.player1, g.player2].includes(rival?.id)),
-    rs = !isDemo && data.rivalries ? data.rivalries.find(r=>r.id===id && r.opponent===rival?.id) || {played:0,wins:0,losses:0} : stats(id, h2h);
+    rs = data.rivalries ? data.rivalries.find(r=>r.id===id && r.opponent===rival?.id) || {played:0,wins:0,losses:0} : stats(id, h2h);
   return `${heading("Player card.", "A little personality behind the paddle.", "THE ROSTER")}<div class="columns"><div><section class="panel profile-panel"><div class="profile-cover"><span>PLAY YOUR GAME.</span></div><div class="profile-intro">${avatar(p, "large")}${data.user?.id === id ? `<button class="btn ghost small profile-edit" data-action="edit-profile">${icon("edit")} Edit profile</button>` : `<button class="btn ghost small profile-edit" data-action="record" data-opponent="${id}">Record a match</button>`}<h1>${esc(p.name)}</h1><small>@${esc(p.username)} · Burntboard player</small><p class="bio">${esc(p.bio || "New to the table. Ready to play.")}</p><div class="badges">${s.wins ? '<span class="badge">🏓 First W</span>' : ""}${s.played >= 5 ? '<span class="badge">🔥 Table regular</span>' : ""}${s.rate >= 70 && s.played ? '<span class="badge">⚡ On a roll</span>' : ""}<span class="badge">✦ Founding roster</span></div></div></section><div class="stats-grid">${[
     ["Wins", s.wins],
     ["Losses", s.losses],
@@ -301,7 +298,7 @@ function match(id) {
         [x.player1, x.player2].includes(p1.id) &&
         [x.player1, x.player2].includes(p2.id),
     ),
-    s = !isDemo && data.rivalries ? data.rivalries.find(r=>r.id===p1.id && r.opponent===p2.id) || {played:0,wins:0,losses:0} : stats(p1.id, h2h);
+    s = data.rivalries ? data.rivalries.find(r=>r.id===p1.id && r.opponent===p2.id) || {played:0,wins:0,losses:0} : stats(p1.id, h2h);
   return `${heading("The game receipt.", "The result. The rivalry. The full story.", "GAME DETAILS", mine ? `<div class="game-actions"><button class="btn soft" data-action="share-game" data-game="${id}">${icon("share")} Share game</button><button class="btn ghost" data-action="correct" data-game="${id}">${icon("edit")} Correct score</button></div>` : "")}<div class="columns"><div><section class="panel match-hero"><div class="eyebrow muted">${dateLabel(g.date)} · OFFICE TABLE · FINAL</div><div class="match-versus"><a class="competitor" href="#profile/${p1.id}">${avatar(p1, "large")}<h3>${esc(first(p1))}</h3><small>@${esc(p1.username)}</small></a><div class="display">${g.score1}<span class="muted"> : </span>${g.score2}</div><a class="competitor" href="#profile/${p2.id}">${avatar(p2, "large")}<h3>${esc(first(p2))}</h3><small>@${esc(p2.username)}</small></a></div>${matchScores(g)}<div class="badge" style="display:inline-block;margin-bottom:22px">${g.matches.some(m=>m.type==='deuce') ? "🔥 Deuce drama" : "🏓 " + esc(first(g.score1 > g.score2 ? p1 : p2)) + " took the W"}</div>${g.notes ? `<p class="notes">“${esc(g.notes)}”</p>` : ""}</section><div style="margin-top:24px">${post(g, { detail: true })}</div></div><aside class="rail"><section class="panel"><h3>Head to head</h3><div class="rivalry"><span class="display">${s.wins} <span class="muted">—</span> ${s.losses}</span><small>${s.played} games played</small></div><div class="progress"><span style="width:${(s.wins / s.played) * 100}%"></span></div><div class="rival-labels"><span>${esc(first(p1))}</span><span>${esc(first(p2))}</span></div></section><section class="panel"><h3>The paper trail</h3><p class="tooltip-note" style="margin-bottom:15px">Every change. Every player. All here.</p>${g.history.map((e) => `<div class="history-item"><strong>${esc(first(player(e.actor)))}</strong> · ${esc(e.text)}${e.after?.score1 != null ? `<div class="tooltip-note">${e.before ? `${receipt(e.before,g)} → ` : ""}${receipt(e.after,g)}</div>` : ""}${e.agent ? `<small>via ${esc(e.agent)}</small>` : ""}<small>${dateLabel(e.createdAt.slice(0, 10))} · ${timeLabel(e.createdAt)}</small></div>`).join("")}</section></aside></div><section class="panel mobile-only" style="margin-top:20px"><h3>The paper trail</h3>${g.history.map((e) => `<div class="history-item"><strong>${esc(first(player(e.actor)))}</strong> · ${esc(e.text)}${e.after?.score1 != null ? `<div class="tooltip-note">${e.before ? `${receipt(e.before,g)} → ` : ""}${receipt(e.after,g)}</div>` : ""}<small>${timeLabel(e.createdAt)}${e.agent ? " · via " + esc(e.agent) : ""}</small></div>`).join("")}</section>`;
 }
 function activity() {
@@ -331,7 +328,7 @@ function activity() {
 let shareDraft = null;
 let setupToken = null;
 function setupInstruction(token) {
-  return `Connect ${agentClient} to my Burntboard at ${location.origin}${isDemo ? "/demo" : ""}. Read ${location.origin}${isDemo ? "/demo-agent.md" : "/agent.md"}. Install it as the burntboard skill in your supported skills directory (Codex: ~/.codex/skills/burntboard/SKILL.md; Claude Code: ~/.claude/skills/burntboard/SKILL.md), or retain it as your playbook if your app has no skill installer. Save my personal key in a private credential store: ${token}. Use ${location.origin}${apiBase} with bearer authentication, fetch /state, confirm my identity, and tell me you’re ready. Never print or commit the key.${isDemo ? " This is a demo connection, isolated from real accounts." : ""}`;
+  return `Connect ${agentClient} to my Burntboard at ${location.origin}. Read ${location.origin}/agent.md. Install it as the burntboard skill in your supported skills directory (Codex: ~/.codex/skills/burntboard/SKILL.md; Claude Code: ~/.claude/skills/burntboard/SKILL.md), or retain it as your playbook if your app has no skill installer. Save my personal key in a private credential store: ${token}. Use ${location.origin}${apiBase} with bearer authentication, fetch /state, confirm my identity, and tell me you’re ready. Never print or commit the key.`;
 }
 function agents() {
   return `${heading("Your agent. Your game.", "Let your agent handle the paperwork. You handle the paddle.", "THE AGENT CORNER")}<section class="agent-hero"><div><div class="eyebrow">HUMAN OR AGENT. SAME PLAYBOOK.</div><h2>“I beat Ben 11–7, 11–9.”<br>Consider it recorded.</h2><p>Scores, player cards, comments, and standings. Everything you can do, your agent can do too.</p></div><div class="terminal"><div class="terminal-bar"><i></i><i></i><i></i><span style="margin-left:auto;color:#9dad8e;font-size:9px">BURNTBOARD SKILL</span></div><p><span class="prompt">you ›</span> I beat Ben 11–7, 11–9. Add “rematch?”</p><p style="margin:10px 0;color:#a6ba91">✓ Game recorded as @dasmer<br>✓ Standings updated<br>✓ Posted to the feed</p><p style="color:#829573">Ready for the next one. 🏓</p></div></section><div class="agent-layout"><section class="panel"><h3>Put your agent on the roster.</h3><p class="tooltip-note">One connection. All your clubhouse moves.</p><div class="step-label">01 · Choose your agent</div><div class="client-picker">${[
@@ -346,7 +343,7 @@ function agents() {
     )
     .join(
       "",
-    )}</div><div class="step-label">02 · Give it the playbook</div>${setupToken ? `<div class="code-block">${esc(setupInstruction(setupToken))}</div><button class="btn primary full" data-action="copy-setup" style="margin-top:15px">${icon("copy")} Copy setup instruction</button><p class="tooltip-note">Connection created. Your agent still needs to run the instruction. Shown once here; disconnect it below anytime.</p>` : `<div class="code-block">Connect ${esc(agentClient)} to your player account.<br>Read the skill. Save your personal key.<br>Ready for the first serve.</div><button class="btn primary full" data-action="connect-agent" style="margin-top:15px">${icon("agent")} ${data.user ? "Create " + esc(agentClient) + " connection" : "Sign in to connect"}</button><p class="tooltip-note">Creates a personal API key that expires in 90 days. No agent app is installed automatically.</p>`}<div style="display:flex;justify-content:space-between;margin-top:22px"><a class="quiet-link" href="${isDemo ? "/demo-agent.md" : "/agent.md"}" download="SKILL.md">Download skill</a><button class="quiet-link" data-action="manual-key">Use an API key instead</button></div></section><section class="panel"><h3>A pretty capable teammate.</h3>${[
+    )}</div><div class="step-label">02 · Give it the playbook</div>${setupToken ? `<div class="code-block">${esc(setupInstruction(setupToken))}</div><button class="btn primary full" data-action="copy-setup" style="margin-top:15px">${icon("copy")} Copy setup instruction</button><p class="tooltip-note">Connection created. Your agent still needs to run the instruction. Shown once here; disconnect it below anytime.</p>` : `<div class="code-block">Connect ${esc(agentClient)} to your player account.<br>Read the skill. Save your personal key.<br>Ready for the first serve.</div><button class="btn primary full" data-action="connect-agent" style="margin-top:15px">${icon("agent")} ${data.user ? "Create " + esc(agentClient) + " connection" : "Sign in to connect"}</button><p class="tooltip-note">Creates a personal API key that expires in 90 days. No agent app is installed automatically.</p>`}<div style="display:flex;justify-content:space-between;margin-top:22px"><a class="quiet-link" href="/agent.md" download="SKILL.md">Download skill</a><button class="quiet-link" data-action="manual-key">Use an API key instead</button></div></section><section class="panel"><h3>A pretty capable teammate.</h3>${[
     ["ball", "Record & correct games", "Only games you’re involved in."],
     [
       "players",
@@ -400,7 +397,7 @@ function render() {
     ["agents", "agent", "Agents"],
   ];
   $("#app").innerHTML =
-    `<div class="layout"><aside class="sidebar"><a href="#feed" class="logo"><span class="logo-mark">🏓</span><span>BURNT<em>BOARD</em></span></a><div class="eyebrow">The office ping pong club</div><nav class="nav" aria-label="Main navigation">${nav.map(([r, i, t]) => `<a href="#${r}" class="${page === r ? "active" : ""}">${icon(i)} ${t}${r === "agents" ? '<span class="count">NEW</span>' : ""}</a>`).join("")}</nav><button class="btn primary sidebar-record" data-action="record">${icon("plus")} Record game</button><div class="sidebar-bottom"><div class="table-status"><span class="dot"></span>The table is calling.<br><span style="font-size:10px;margin-left:13px">Burnt × Allowance · San Francisco</span></div><button class="account" data-action="account" style="width:100%;text-align:left">${avatar(data.user || { name: "Guest", avatar: "🏓", color: "#9fae8e" })}<div><strong>${data.user ? esc(data.user.name) : "Grab a paddle"}</strong><small>${data.user ? "@" + esc(data.user.username) : "Join the clubhouse"}</small></div>${icon("more")}</button></div></aside><main class="main"><header class="topbar"><span class="crumb">The clubhouse <span style="margin:0 10px;color:#b2b4a6">/</span> <b>${nav.find((n) => n[0] === page)?.[2] || "The game"}</b></span><a class="logo mobile-brand" href="#feed">BURNT<em>BOARD</em></a><div class="topbar-right"><span class="eyebrow muted" style="font-size:9px">REAL SCORES. REAL PRIDE.</span>${isDemo ? `<button class="demo-tag" data-action="demo-menu">Demo</button>` : ""}${data.user ? `<button data-action="account" aria-label="Your account">${avatar(data.user, "tiny")}</button>` : `<button class="btn small" data-action="signin">Sign in</button>`}</div></header><div class="content">${{ feed, leaderboard, players, profile: () => profile(id), match: () => match(id), activity, agents }[page]()}</div></main><nav class="mobile-nav" aria-label="Mobile navigation">${[
+    `<div class="layout"><aside class="sidebar"><a href="#feed" class="logo"><span class="logo-mark">🏓</span><span>BURNT<em>BOARD</em></span></a><div class="eyebrow">The office ping pong club</div><nav class="nav" aria-label="Main navigation">${nav.map(([r, i, t]) => `<a href="#${r}" class="${page === r ? "active" : ""}">${icon(i)} ${t}${r === "agents" ? '<span class="count">NEW</span>' : ""}</a>`).join("")}</nav><button class="btn primary sidebar-record" data-action="record">${icon("plus")} Record game</button><div class="sidebar-bottom"><div class="table-status"><span class="dot"></span>The table is calling.<br><span style="font-size:10px;margin-left:13px">Burnt × Allowance · San Francisco</span></div><button class="account" data-action="account" style="width:100%;text-align:left">${avatar(data.user || { name: "Guest", avatar: "🏓", color: "#9fae8e" })}<div><strong>${data.user ? esc(data.user.name) : "Grab a paddle"}</strong><small>${data.user ? "@" + esc(data.user.username) : "Join the clubhouse"}</small></div>${icon("more")}</button></div></aside><main class="main"><header class="topbar"><span class="crumb">The clubhouse <span style="margin:0 10px;color:#b2b4a6">/</span> <b>${nav.find((n) => n[0] === page)?.[2] || "The game"}</b></span><a class="logo mobile-brand" href="#feed">BURNT<em>BOARD</em></a><div class="topbar-right"><span class="eyebrow muted" style="font-size:9px">REAL SCORES. REAL PRIDE.</span>${data.user ? `<button data-action="account" aria-label="Your account">${avatar(data.user, "tiny")}</button>` : `<button class="btn small" data-action="signin">Sign in</button>`}</div></header><div class="content">${{ feed, leaderboard, players, profile: () => profile(id), match: () => match(id), activity, agents }[page]()}</div></main><nav class="mobile-nav" aria-label="Mobile navigation">${[
       ["feed", "feed", "Feed"],
       ["leaderboard", "board", "Standings"],
     ]
@@ -433,12 +430,12 @@ function modal(html) {
 }
 function signIn() {
   modal(
-    `<div class="eyebrow orange">WELCOME TO THE CLUB</div><h2>Your next rival<br>is already here.</h2><p class="muted">Sign in with your Burnt or Allowance email.</p><form data-form="email"><label for="email">Work email</label><input id="email" type="email" name="email" placeholder="you@getburnt.ai" autocomplete="email" required><div class="form-error" role="alert"></div><button class="btn primary full" style="margin-top:20px">Send sign-in code ${icon("arrow")}</button></form>${isDemo ? `<div class="otp-demo">Demo · no email is sent. The sign-in code is 123456.</div><button class="btn soft full" data-action="demo-login">Try it as Dasmer</button>` : ""}<p class="tooltip-note" style="text-align:center">For @getburnt.ai and @useallowance.com players.</p>`,
+    `<div class="eyebrow orange">WELCOME TO THE CLUB</div><h2>Your next rival<br>is already here.</h2><p class="muted">Sign in with your Burnt or Allowance email.</p><form data-form="email"><label for="email">Work email</label><input id="email" type="email" name="email" placeholder="you@getburnt.ai" autocomplete="email" required><div class="form-error" role="alert"></div><button class="btn primary full" style="margin-top:20px">Send sign-in code ${icon("arrow")}</button></form><p class="tooltip-note" style="text-align:center">For @getburnt.ai and @useallowance.com players.</p>`,
   );
 }
 function otp(email) {
   modal(
-    `<div class="eyebrow orange">YOU’RE ONE SERVE AWAY</div><h2>Check your inbox.</h2><p class="muted">Enter the code for <strong>${esc(email)}</strong>.</p><form data-form="otp" data-email="${esc(email)}"><label for="code">Six-digit code</label><input id="code" class="otp-input" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required>${isDemo ? `<div class="otp-demo">Use <strong>123456</strong>. No email was sent.</div>` : ""}<div class="form-error" role="alert"></div><button class="btn primary full" style="margin-top:20px">Let me in ${icon("arrow")}</button></form><button class="quiet-link" style="display:block;margin:20px auto 0" data-action="signin">Use another email</button>`,
+    `<div class="eyebrow orange">YOU’RE ONE SERVE AWAY</div><h2>Check your inbox.</h2><p class="muted">Enter the code for <strong>${esc(email)}</strong>.</p><form data-form="otp" data-email="${esc(email)}"><label for="code">Six-digit code</label><input id="code" class="otp-input" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required><div class="form-error" role="alert"></div><button class="btn primary full" style="margin-top:20px">Let me in ${icon("arrow")}</button></form><button class="quiet-link" style="display:block;margin:20px auto 0" data-action="signin">Use another email</button>`,
   );
 }
 function requireLogin() {
@@ -478,7 +475,7 @@ function editProfile(onboard = false) {
 function account() {
   if (!data.user) return signIn();
   modal(
-    `<div class="eyebrow orange">YOUR CORNER</div><h2>Hey, ${esc(first(data.user))}.</h2><p class="muted">${esc(data.user.email)}</p><a class="btn soft full" href="#profile/${data.user.id}" data-action="close">${icon("players")} My player card</a><button class="btn soft full" data-action="edit-profile" style="margin-top:10px">${icon("edit")} Edit profile</button><a class="btn soft full" href="#activity" data-action="close" style="margin-top:10px">${icon("activity")} Activity history</a>${!isDemo ? `<label style="display:flex;gap:10px;align-items:center;margin-top:24px"><input style="width:auto" type="checkbox" data-preference="notifications" ${data.user.notifications ? "checked" : ""}> Match and comment emails</label><small class="field-hint">Sign-in and agent security emails stay on.</small>` : ""}<button class="btn ghost full" data-action="logout" style="margin-top:23px">${icon("logout")} Sign out</button>`,
+    `<div class="eyebrow orange">YOUR CORNER</div><h2>Hey, ${esc(first(data.user))}.</h2><p class="muted">${esc(data.user.email)}</p><a class="btn soft full" href="#profile/${data.user.id}" data-action="close">${icon("players")} My player card</a><button class="btn soft full" data-action="edit-profile" style="margin-top:10px">${icon("edit")} Edit profile</button><a class="btn soft full" href="#activity" data-action="close" style="margin-top:10px">${icon("activity")} Activity history</a><label style="display:flex;gap:10px;align-items:center;margin-top:24px"><input style="width:auto" type="checkbox" data-preference="notifications" ${data.user.notifications ? "checked" : ""}> Match and comment emails</label><small class="field-hint">Sign-in and agent security emails stay on.</small><button class="btn ghost full" data-action="logout" style="margin-top:23px">${icon("logout")} Sign out</button>`,
   );
 }
 async function action(el) {
@@ -494,20 +491,8 @@ async function action(el) {
     case "account":
       account();
       break;
-    case "demo-login":
-      await api("/auth/request", "POST", { email: "dasmer@useallowance.com" });
-      const auth = await api("/auth/verify", "POST", {
-        email: "dasmer@useallowance.com",
-        code: "123456",
-      });
-      if (isDemo) localStorage.setItem(tokenStore, auth.token);
-      closeModal();
-      await refresh();
-      toast("Welcome to the clubhouse, Dasmer.");
-      break;
     case "logout":
       await api("/auth/logout", "POST", {});
-      localStorage.removeItem(tokenStore);
       setupToken = null;
       closeModal();
       await refresh();
@@ -558,7 +543,7 @@ async function action(el) {
       break;
     case "load-more": {
       const kind = el.dataset.kind;
-      const next = await api("/state?" + kind + "Before=" + encodeURIComponent(data.pagination[kind]) + (!isDemo && location.hash.startsWith("#profile/") ? "&player=" + encodeURIComponent(location.hash.slice(9)) : ""));
+      const next = await api("/state?" + kind + "Before=" + encodeURIComponent(data.pagination[kind]) + (location.hash.startsWith("#profile/") ? "&player=" + encodeURIComponent(location.hash.slice(9)) : ""));
       const merged = new Map(data[kind].map(row=>[row.id,row]));
       next[kind].forEach(row=>merged.set(row.id,row));
       data[kind]=[...merged.values()];
@@ -651,21 +636,6 @@ async function action(el) {
       await refresh();
       toast("Agent disconnected. Its key no longer works.");
       break;
-    case "demo-menu":
-      modal(
-        `<div class="eyebrow orange">DEMO CLUBHOUSE</div><h2>The whole clubhouse.<br>Just for trying out.</h2><p class="muted">All emails, players, and scores here are demo data. Demo changes are temporary and never affect the real clubhouse.</p><button class="btn soft full" data-action="signin">Try another player</button><a class="btn soft full" href="#activity" data-action="close" style="margin-top:10px">See all activity</a><button class="btn ghost full" data-action="reset" style="margin-top:23px">Reset demo data</button>`,
-      );
-      break;
-    case "reset":
-      await api("/reset", "POST", {});
-      localStorage.removeItem(tokenStore);
-      setupToken = null;
-      feedFilter = "all";
-      commentsOpen.clear();
-      closeModal();
-      await refresh();
-      toast("Fresh scores. Fresh start.");
-      break;
     case "rematch":
       closeModal();
       recordGame(el.dataset.opponent);
@@ -701,7 +671,6 @@ document.addEventListener("submit", async (e) => {
           email: f.dataset.email,
           code: b.code,
         });
-        if (isDemo) localStorage.setItem(tokenStore, auth.token);
         closeModal();
         await refresh();
         if (auth.isNew) editProfile(true);
@@ -846,8 +815,7 @@ document.addEventListener("keydown", (e) => {
 });
 window.addEventListener("hashchange", () => {
   closeModal();
-  if (!isDemo) refresh().catch(e=>toast(e.message));
-  else render();
+  refresh().catch(e=>toast(e.message));
   window.scrollTo(0, 0);
 });
 $("#app").innerHTML =

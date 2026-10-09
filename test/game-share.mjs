@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import http from 'node:http';
+import {createHmac} from 'node:crypto';
 import sharp from 'sharp';
 import {gameShareURL,publicReceipt,serveGameShare} from '../game-share.mjs';
 const key='fixture-sharing-secret',game={id:'test-game',player1:'a',player2:'b',score1:2,score2:1,date:'2026-10-08',revision:1,
@@ -12,6 +13,7 @@ const server=http.createServer(async(req,res)=>{try{if(!await serveGameShare(req
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));origin='http://127.0.0.1:'+server.address().port;
 try {
   const url=gameShareURL({origin,id:game.id,key});
+  assert.equal(url,`${origin}/g/${game.id}/${createHmac('sha256',key).update(`burntboard:game-share:v1:real:${game.id}`).digest('hex')}`,'Previously shared real links retain their signatures');
   for(const invalid of [url.slice(0,-1)+(url.endsWith('0')?'1':'0'),url.replace(game.id,'another-game'),url.replace('/g/','/demo/g/'),origin+'/g/test-game/invalid']) {
     assert.equal((await fetch(invalid)).status,404);
   }

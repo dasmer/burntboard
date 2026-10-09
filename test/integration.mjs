@@ -145,9 +145,10 @@ check((await call('/me','PATCH',{bio:'Expired'}, {Authorization:'Bearer '+expire
 const csrf=await fetch(origin+'/api/v1/me',{method:'PATCH',headers:{Cookie:a.auth.Cookie,'Content-Type':'application/json',Origin:'https://evil.example'},body:'{"bio":"CSRF"}'});
 check(csrf.status,403);
 check((await fetch(origin+'/.env.local')).status,404);check((await fetch(origin+'/server/config.mjs')).status,404);
-check((await fetch(origin+'/demo')).status,200);
-const demo=await fetch(origin+'/demo/api/v1/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:'dasmer@useallowance.com',code:'123456'})});
-check(demo.status,400,'Demo login still requires its own challenge');
+for(const path of ['/demo','/demo/','/demo/api/v1/state','/demo/api/v1/auth/verify','/demo/g/fixture','/demo-agent.md','/images/players/dasmer.jpg']) {
+  check((await fetch(origin+path)).status,404,'Retired demo paths are unavailable');
+}
+check((await fetch(origin+'/demo/api/v1/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,404,'Retired demo login cannot authenticate');
 check((await call('/auth/verify','POST',{email:a.email,code:'123456'})).status,401,'Demo code is not accepted by real login');
 const timestamp=new Date().toISOString();
 await query(db.database.from('bb_games').insert(Array.from({length:105},()=>({player1:a.user.id,player2:b.user.id,
