@@ -367,6 +367,7 @@ function agents() {
     )}</section></div><section class="panel" style="margin-top:23px"><div class="section-title"><h3>Your connections</h3><small>Personal. Revocable. Yours.</small></div>${data.keys.length ? data.keys.map((k) => `<div class="connection"><span class="avatar" style="background:#e8eddf">${icon("agent")}</span><div><strong>${esc(k.label)}</strong><small>API access · created ${dateLabel(k.createdAt.slice(0, 10))}</small></div><button data-action="revoke-key" data-id="${k.id}">Disconnect</button></div>`).join("") : '<p class="muted" style="font-size:12px">No agents connected yet. Your future teammate is waiting above.</p>'}</section>`;
 }
 function render() {
+  clearReactionEffect();
   const [route = "feed", id] = location.hash.slice(1).split("/");
   const page = [
     "feed",
@@ -478,6 +479,69 @@ function account() {
     `<div class="eyebrow orange">YOUR CORNER</div><h2>Hey, ${esc(first(data.user))}.</h2><p class="muted">${esc(data.user.email)}</p><a class="btn soft full" href="#profile/${data.user.id}" data-action="close">${icon("players")} My player card</a><button class="btn soft full" data-action="edit-profile" style="margin-top:10px">${icon("edit")} Edit profile</button><a class="btn soft full" href="#activity" data-action="close" style="margin-top:10px">${icon("activity")} Activity history</a><label style="display:flex;gap:10px;align-items:center;margin-top:24px"><input style="width:auto" type="checkbox" data-preference="notifications" ${data.user.notifications ? "checked" : ""}> Match and comment emails</label><small class="field-hint">Sign-in and agent security emails stay on.</small><button class="btn ghost full" data-action="logout" style="margin-top:23px">${icon("logout")} Sign out</button>`,
   );
 }
+const pendingReactions = new Set();
+let clearReactionEffect = () => {};
+function celebrateReaction(card, emoji) {
+  clearReactionEffect();
+  if (!card) return;
+  const animations = [];
+  const animate = (node, frames, timing) => {
+    const animation = node.animate(frames, timing);
+    animations.push(animation);
+    animation.finished.catch(() => {});
+    return animation;
+  };
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    animate(card, [{outline:'2px solid #f0532c'}, {outline:'2px solid transparent'}], {duration:200});
+    clearReactionEffect = () => animations.forEach(a => a.cancel());
+    return;
+  }
+  const themes = {
+    '🔥': ['ON FIRE.', 'THAT RALLY HAD HEAT', '#fff0dfed', '#b83d19', '🔥'],
+    '🏓': ['WHAT A GAME.', 'RESPECT THE RALLY', '#e6f0e9f2', '#315c45', '🏓'],
+    '😂': ['I’M GONE.', 'ABSOLUTELY NO COMPOSURE', '#fff5d6f2', '#8b631c', '💧'],
+    '👏': ['TAKE A BOW.', 'THE CROWD GOES WILD', '#f6ead8f2', '#8b5623', '✦'],
+    '😤': ['BUILT DIFFERENT.', 'PURE COMPETITIVE ENERGY', '#e8eeedf2', '#3e5954', '💨'],
+  };
+  const theme = themes[emoji];
+  if (!theme) return;
+  const duration = 2800, layer = document.createElement('div');
+  layer.className = 'reaction-takeover';
+  layer.setAttribute('aria-hidden', 'true');
+  layer.style.setProperty('--reaction-wash', theme[2]);
+  layer.style.setProperty('--reaction-tone', theme[3]);
+  layer.innerHTML = `<div class="reaction-halo"></div><div class="reaction-center"><div class="reaction-hero">${emoji}</div><div class="reaction-title">${theme[0]}</div><div class="reaction-caption">${theme[1]}</div></div>`;
+  card.append(layer);
+  const cleanup = () => { animations.forEach(a => a.cancel()); layer.remove(); };
+  clearReactionEffect = cleanup;
+  animate(layer, [{opacity:0}, {opacity:1,offset:.12}, {opacity:1,offset:.75}, {opacity:0}], {duration})
+    .finished.then(cleanup, () => {});
+  animate(layer.querySelector('.reaction-center'), [
+    {transform:'translateY(35px) scale(.65)',opacity:0,easing:'ease-out'},
+    {transform:'translateY(-8px) scale(1.05)',opacity:1,offset:.2},
+    {transform:'translateY(0) scale(1)',opacity:1,offset:.3},
+    {transform:'translateY(0) scale(1)',opacity:1,offset:.75},
+    {transform:'translateY(-25px) scale(1.08)',opacity:0},
+  ], {duration});
+  animate(layer.querySelector('.reaction-halo'), [{transform:'scale(.2)',opacity:.6}, {transform:'scale(2.8)',opacity:0}], {duration:duration*.8,easing:'ease-out'});
+  const hero = layer.querySelector('.reaction-hero');
+  if (emoji === '😂') animate(hero, [{transform:'rotate(-12deg)'}, {transform:'rotate(12deg)'}, {transform:'rotate(-12deg)'}], {duration:duration/4,iterations:3});
+  if (emoji === '🏓') animate(hero, [{transform:'translateX(-45px) rotate(-18deg)'}, {transform:'translateX(45px) rotate(18deg)'}, {transform:'translateX(0) rotate(0)'}], {duration:duration*.7,easing:'ease-in-out'});
+  if (emoji === '😤') animate(hero, [{transform:'scale(.9)'}, {transform:'scale(1.18)'}, {transform:'scale(1)'}], {duration:duration*.65,easing:'ease-out'});
+  for (let i = 0; i < 24; i++) {
+    const speck = document.createElement('span'), x = i*137%100;
+    speck.className = 'reaction-speck';
+    speck.textContent = theme[4];
+    speck.style.fontSize = (emoji === '👏' ? 18 : 22) + i%4*7 + 'px';
+    speck.style.left = x + '%';
+    speck.style.top = i*71%100 + '%';
+    layer.append(speck);
+    const start = emoji === '🔥' ? 'translateY(90px) scale(.2)' : 'translateY(-130px) rotate(-25deg) scale(.2)';
+    const end = emoji === '🔥' ? 'translateY(-160px) rotate(20deg) scale(1.1)' : emoji === '😤' ? `translate(${x < 50 ? -140 : 140}px,-100px) scale(2.4)` : 'translateY(130px) rotate(50deg) scale(1)';
+    animate(speck, [{transform:start,opacity:0}, {opacity:.8,offset:.2}, {transform:end,opacity:0}], {duration:duration*.85,delay:i%6*duration*.02,easing:'ease-out',fill:'both'});
+  }
+}
+
 async function action(el) {
   const type = el.dataset.action,
     id = el.dataset.game;
@@ -573,12 +637,22 @@ async function action(el) {
       reactionOpen = reactionOpen === id ? null : id;
       render();
       break;
-    case "react":
+    case "react": {
       if (!requireLogin()) return;
-      await api("/games/" + id + "/react", "POST", { emoji: el.dataset.emoji });
-      reactionOpen = null;
-      await refresh();
+      if (pendingReactions.has(id)) return;
+      pendingReactions.add(id);
+      const emoji = el.dataset.emoji;
+      const removing = data.games.find(g => g.id === id)?.reactions[emoji]?.includes(data.user.id);
+      try {
+        await api("/games/" + id + "/react", "POST", { emoji });
+        reactionOpen = null;
+        await refresh();
+        if (!removing && data.games.find(g => g.id === id)?.reactions[emoji]?.includes(data.user?.id)) {
+          celebrateReaction(document.getElementById("post-" + id), emoji);
+        }
+      } finally { pendingReactions.delete(id); }
       break;
+    }
     case "delete-comment":
       await api("/games/" + id + "/comments", "DELETE", { id: el.dataset.id });
       await refresh();
