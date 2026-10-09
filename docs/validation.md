@@ -1,5 +1,7 @@
 # Validation and rollout boundary
 
+This is the historical validation snapshot from the initial app implementation on October 8, 2026. Coverage counts, scoring UI, and pre-cutover deployment notes below describe that stage; use [README.md](../README.md) for current tests and release instructions.
+
 All database fixtures and browser writes use **burntboard-test**. No production backend was seeded, no historical JSON was imported, and the PR is not merged or deployed.
 
 ## Automated coverage
