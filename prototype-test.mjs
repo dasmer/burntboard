@@ -85,6 +85,17 @@ try {
   );
   check(created.status, 200);
   const id = created.body.id;
+  const share=await call('/games/'+id+'/share','GET',undefined,dasmer);
+  check(share.status,200);
+  check(new URL(share.body.url).pathname.startsWith('/demo/g/'),true);
+  check((await call('/games/'+id+'/share')).status,401);
+  check((await call('/games/'+id+'/share','GET',undefined,rhea)).status,403);
+  const sharedReceipt=await fetch(share.body.url);
+  check(sharedReceipt.status,200);
+  const receiptHTML=await sharedReceipt.text();
+  check(receiptHTML.includes('A deuce finish'),false);
+  check(receiptHTML.includes('property="og:image"'),true);
+  check((await fetch(share.body.url+'/image.png')).headers.get('content-type'),'image/png');
   check(
     (
       await call(

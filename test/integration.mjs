@@ -53,6 +53,18 @@ for(const matches of [[win,win],[loss,loss],[win,loss,deuce],[loss,win,loss]]) {
 const key=randomUUID();
 const recorded=await call('/games','POST',body,a.auth,key);check(recorded.status,200);
 const id=recorded.value.id;
+check((await call('/games/'+id+'/share')).status,401,'Sharing requires a signed-in participant');
+check((await call('/games/'+id+'/share','GET',undefined,c.auth)).status,403,'Nonparticipants cannot publish a receipt');
+const shared=await call('/games/'+id+'/share','GET',undefined,a.auth);check(shared.status,200);
+check((await call('/games/'+id+'/share','GET',undefined,b.auth)).value.url,shared.value.url,'Both participants share the same receipt');
+const receiptResponse=await fetch(shared.value.url),receiptHTML=await receiptResponse.text();
+check(receiptResponse.status,200,'Shared receipt is readable by an anonymous crawler');
+check(receiptHTML.includes('property="og:image"'),true,'Preview metadata is present without client JavaScript');
+check(receiptHTML.includes('Integration test'),false,'Private notes never enter public metadata or HTML');
+check(receiptHTML.includes(a.email),false,'Emails stay private');
+const sharedPNG=await fetch(shared.value.url+'/image.png?v=1');check(sharedPNG.status,200);
+const sharedImage=await sharp(Buffer.from(await sharedPNG.arrayBuffer())).metadata();check([sharedImage.width,sharedImage.height],[1200,630]);
+check((await fetch(shared.value.url.slice(0,-1)+(shared.value.url.endsWith('0')?'1':'0'))).status,404,'Tampered links cannot read games');
 check((await call('/games','POST',body,a.auth,key)).value.id,id,'Retry does not create a second game');
 check((await call('/games','POST',{...body,notes:'Changed'},a.auth,key)).status,409);
 check((await call('/games','POST',{...body,opponent:a.user.id},a.auth)).status,400);
@@ -69,6 +81,9 @@ check((await call('/games/'+id,'PATCH',{matches:[win,loss,deuce],revision:2},b.a
 let seriesState=(await call('/state','GET',undefined,a.auth)).value;
 game=seriesState.games.find(g=>g.id===id);
 check([game.score1,game.score2],[2,1]);check(game.matches,[win,loss,deuce]);
+const correctedReceipt=await (await fetch(shared.value.url)).text();
+check(correctedReceipt.includes('/image.png?v=3'),true,'Corrections version the OG image');
+check(correctedReceipt.includes('14–12'),true,'The shared receipt reflects the corrected deciding match');
 check(seriesState.standings.all.find(p=>p.id===a.user.id).wins,1,'A three-match game counts as one win');
 check(seriesState.standings.all.find(p=>p.id===a.user.id).points,34,'Points include all individual matches');
 const scoreEmail=(await query(db.database.from('bb_outbox').select('payload').eq('payload->>gameId',id).eq('payload->>action','game.corrected').order('created_at',{ascending:false}).limit(1)))[0];
@@ -100,6 +115,7 @@ game=(await call('/state','GET',undefined,a.auth)).value.games.find(g=>g.id===id
 check(Object.values(game.reactions).flat().includes(a.user.id),false);
 const connection=await call('/agent-keys','POST',{label:'Integration agent'},a.auth);check(connection.status,200);
 const agent={Authorization:'Bearer '+connection.value.token};
+check((await call('/games/'+id+'/share','GET',undefined,agent)).value.url,shared.value.url,'Agents have the same participant sharing capability');
 check((await call('/state','GET',undefined,agent)).value.user.id,a.user.id);
 check((await call('/me','PATCH',{bio:'Updated via agent'},agent)).status,200);
 check((await call('/games/'+id,'PATCH',{matches:[loss,loss],revision:3},agent)).status,200,'Agent can record the opposite-player sweep');
