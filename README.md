@@ -24,6 +24,10 @@ Email notifications cover matches recorded/corrected, new comments, and new agen
 
 The Agents page creates a named personal key and a setup instruction containing the downloadable skill. The same API powers human and agent actions. See skills/burntboard/SKILL.md for commands; /agent.md serves that file. Agents cannot impersonate another player or acquire administrator powers.
 
+Participants can share a game from the feed, game detail, or recording receipt. The preview offers native sharing, Copy link, and Save card. Shared URLs serve a public game receipt with server-rendered Open Graph metadata and a 1200×630 PNG containing names, series result, match scores, date, and branding. Notes, comments, emails, photos, profiles, and activity history are excluded.
+
+Receipt links are unlisted signed capabilities: anyone holding one can view that receipt, but there is no public game listing. Corrections update the receipt and version its image URL; external platforms may retain their own preview caches. Rotating OTP_SECRET invalidates existing real receipt links. There is no individual link revocation. Demo receipts use separate process-local signatures and reset on restart. No database changes are required.
+
 ## Testing without touching production
 
 The linked development project is burntboard-test (or a fresh burntboard-series-test for series validation), separate from any production backend. Integration tests refuse to run unless APP_ENV=test, the linked project name matches, and the backend URL matches the link. Startup also checks the database environment marker against APP_ENV.

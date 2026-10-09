@@ -1,5 +1,6 @@
 import http from "node:http";
 import {seriesScore} from "./series.mjs";
+import {gameShareURL,serveGameShare} from './game-share.mjs';
 import { readFile } from "node:fs/promises";
 import { randomUUID, randomBytes, createHash } from "node:crypto";
 import { dirname, resolve, extname, sep } from "node:path";
@@ -9,6 +10,10 @@ const root = dirname(fileURLToPath(import.meta.url)),
   now = () => new Date().toISOString();
 let state;
 const sessions = new Map();
+const demoShareKey=randomBytes(32).toString('hex');
+export const demoShare=(req,res,origin)=>serveGameShare(req,res,{origin,key:demoShareKey,demo:true,load:async id=>{
+  const game=state.games.find(g=>g.id===id);return game?{game,players:state.players}:null;
+}});
 function seed() {
   sessions.clear();
   const players = [
@@ -164,9 +169,10 @@ const mime = {
   ".svg": "image/svg+xml",
   ".json": "application/json",
 };
-export const demoHandler = async (req, res) => {
+export const demoHandler = async (req, res, origin='http://localhost:'+ (process.env.PORT || 4173)) => {
     try {
       const url = new URL(req.url, "http://localhost");
+      if(await demoShare(req,res,origin))return;
       if (!url.pathname.startsWith("/api/")) {
         const path = resolve(
           root,
@@ -328,7 +334,10 @@ export const demoHandler = async (req, res) => {
         const [, , id, action] = path.split("/"),
           g = state.games.find((g) => g.id === id);
         if (!g) throw error("Match not found", 404);
-        if (req.method === "PATCH" && !action) {
+        if (req.method === 'GET' && action === 'share') {
+          if(![g.player1,g.player2].includes(user.id))throw error('Only participants can share this game.',403);
+          result={url:gameShareURL({origin,id:g.id,key:demoShareKey,demo:true})};
+        } else if (req.method === "PATCH" && !action) {
           if (![g.player1, g.player2].includes(user.id))
             throw error("Only the players in this match can correct it.", 403);
           if (b.revision !== g.revision)
@@ -392,7 +401,7 @@ export const demoHandler = async (req, res) => {
             gameId: id,
           });
         } else throw error("Not found", 404);
-        result = { ok: true };
+        if(action!=='share') result = { ok: true };
       } else if (req.method === "POST" && path === "/agent-keys") {
         requireUser(user);
         const token = "bb_local_" + randomBytes(24).toString("hex"),
