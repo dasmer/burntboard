@@ -162,7 +162,7 @@ function matchScores(g) {
 }
 function matchInput(i,m,names) {
   const mode=m?.type || 'exact';
-  return `<fieldset class="series-match" data-match="${i}" data-mode="${mode}"><legend>Match ${i+1}${i===2?' · the decider':''}</legend>${mode==='exact'?`<div class="score-inputs"><div><label for="m${i}a">${esc(names[0])}</label><input id="m${i}a" name="m${i}a" type="number" min="0" max="11" step="1" value="${m?.score1??''}"></div><span>:</span><div><label for="m${i}b">${esc(names[1])}</label><input id="m${i}b" name="m${i}b" type="number" min="0" max="11" step="1" value="${m?.score2??''}"></div></div><div class="score-options"><button type="button" data-action="match-mode" data-mode="deuce">⇄ Deuce finish</button><button type="button" data-action="match-mode" data-mode="unrecorded">ⓘ Forgot the score?</button></div><div class="match-error" role="alert" hidden><span>Reached deuce? Choose who won—no final score needed.</span><button type="button" class="quiet-link" data-action="match-mode" data-mode="deuce">Use deuce finish →</button></div>`:`<span class="result-tag ${mode==='deuce'?'deuce':''}">${mode==='deuce'?'Deuce finish':'Score not recorded'}</span><p class="field-hint">${mode==='deuce'?'Deuce, advantage, game. No final point total needed.':'That’s fine. Just tell us who took the match.'}</p><label>Who won?</label><div class="match-winners">${names.map((name,w)=>`<label><input type="radio" aria-label="${esc(name)}" name="winner${i}" value="${w+1}" ${m?.winner===w+1?'checked':''}><span>${esc(name)}</span></label>`).join('')}</div><button type="button" class="quiet-link" data-action="match-mode" data-mode="exact">↩ Enter exact score instead</button>`}</fieldset>`;
+  return `<fieldset class="series-match" data-match="${i}" data-mode="${mode}"><legend>Match ${i+1}${i===2?' · the decider':''}</legend>${mode==='exact'?`<div class="score-inputs"><div><label for="m${i}a">${esc(names[0])}</label><input id="m${i}a" name="m${i}a" type="number" inputmode="numeric" min="0" max="11" step="1" value="${m?.score1??''}"></div><span>:</span><div><label for="m${i}b">${esc(names[1])}</label><input id="m${i}b" name="m${i}b" type="number" inputmode="numeric" min="0" max="11" step="1" value="${m?.score2??''}"></div></div><div class="score-options"><button type="button" data-action="match-mode" data-mode="deuce">⇄ Deuce finish</button><button type="button" data-action="match-mode" data-mode="unrecorded">ⓘ Forgot the score?</button></div><div class="match-error" role="alert" hidden><span>Reached deuce? Choose who won—no final score needed.</span><button type="button" class="quiet-link" data-action="match-mode" data-mode="deuce">Use deuce finish →</button></div>`:`<span class="result-tag ${mode==='deuce'?'deuce':''}">${mode==='deuce'?'Deuce finish':'Score not recorded'}</span><p class="field-hint">${mode==='deuce'?'Deuce, advantage, game. No final point total needed.':'That’s fine. Just tell us who took the match.'}</p><label>Who won?</label><div class="match-winners">${names.map((name,w)=>`<label><input type="radio" aria-label="${esc(name)}" name="winner${i}" value="${w+1}" ${m?.winner===w+1?'checked':''}><span>${esc(name)}</span></label>`).join('')}</div><button type="button" class="quiet-link" data-action="match-mode" data-mode="exact">↩ Enter exact score instead</button>`}</fieldset>`;
 }
 function matchInputs(matches,me,opponent) {
   return [0,1,2].map(i=>matchInput(i,matches[i],[me,opponent])).join('');
@@ -417,17 +417,16 @@ function closeModal() {
   document.body.style.overflow = "";
   modalReturn?.focus();
 }
-function modal(html) {
-  modalReturn = document.activeElement;
+function modal(html, {record = false, focus = null} = {}) {
+  if (!$("#modal-root").firstChild) modalReturn = document.activeElement;
   $("#app").inert = true;
   document.body.style.overflow = "hidden";
   $("#modal-root").innerHTML =
-    `<div class="modal-overlay"><section class="modal" role="dialog" aria-modal="true" aria-label="${esc(html.match(/<h2>(.*?)<\/h2>/)?.[1] || "Burntboard dialog")}"><button class="close-modal" data-action="close" aria-label="Close dialog">${icon("close")}</button>${html}</section></div>`;
-  requestAnimationFrame(() =>
-    $(
-      "#modal-root input:not([type=file]), #modal-root button:not(.close-modal)",
-    )?.focus(),
-  );
+    `<div class="modal-overlay ${record ? "record-overlay" : ""}"><section class="modal ${record ? "record-dialog" : ""}" role="dialog" aria-modal="true" aria-label="${esc(html.match(/<h2>(.*?)<\/h2>/)?.[1] || "Burntboard dialog")}"><button class="close-modal" data-action="close" aria-label="Close dialog">${icon("close")}</button>${html}</section></div>`;
+  if (record) sizeRecordDialog();
+  const target = focus ? $(focus) : $("#modal-root input:not([type=file]), #modal-root button:not(.close-modal)");
+  if (focus) target?.focus({preventScroll:true});
+  else requestAnimationFrame(() => { if (target?.isConnected) target.focus(); });
 }
 function signIn() {
   modal(
@@ -446,25 +445,35 @@ function requireLogin() {
   }
   return true;
 }
+let recordDraft;
 function recordGame(opponent = "", game = null) {
   if (!requireLogin()) return;
-  const me = game ? player(game.player1) : data.user,
-    p2 = game?.player2 || opponent;
-  modal(
-    `<div class="eyebrow orange">${game ? "KEEP THE RECEIPTS HONEST" : "PUT IT ON THE BOARD"}</div><h2>${game ? "Correct the score." : "How’d it go?"}</h2><p class="muted">${game ? "The original scores stay in the game history." : "Best of three matches. First to two wins takes the game."}</p><form data-form="game" novalidate data-player1name="${esc(first(me))}" data-player2name="${esc(game?first(player(p2)):p2?first(player(p2)):"Opponent")}" ${game ? `data-game="${game.id}" data-revision="${game.revision}"` : ""}>${
-      game
-        ? `<label>Your matchup</label><div class="code-block">${esc(me.name)} vs ${esc(player(p2).name)}</div>`
-        : `<label for="opponent">Your opponent</label><select name="opponent" id="opponent" required><option value="">Choose a player…</option>${data.players
-            .filter((p) => p.id !== data.user.id)
-            .map(
-              (p) =>
-                `<option value="${p.id}" ${p.id === p2 ? "selected" : ""}>${esc(p.name)} · @${esc(p.username)}</option>`,
-            )
-            .join("")}</select>`
-    }${matchInputs(game?.matches || [],first(me),p2?first(player(p2)):"Opponent")}<small class="field-hint">Play to 11. Win by two. Choose Deuce finish once you reach 10–10.</small><p class="series-status field-hint"></p>${!game ? `<label for="date">When did you play?</label><input id="date" name="date" type="date" value="${today}" max="${today}" required>` : ""}<label for="notes">The story <span class="muted">· optional</span></label><textarea id="notes" name="notes" maxlength="240" placeholder="A rematch request. A humble brag. An unbelievable rally.">${esc(game?.notes || "")}</textarea><div class="form-error" role="alert"></div><div class="form-footer"><button class="btn ghost" type="button" data-action="close">Cancel</button><button class="btn primary" type="submit">${game ? "Save correction" : "Record game"} ${icon("check")}</button></div></form>`,
-  );
+  recordDraft = {opponent:game?.player2 || opponent,game,matches:game?.matches || [],date:today,notes:game?.notes || ""};
+  if (!recordDraft.opponent) chooseOpponent();
+  else recordScores();
+}
+function chooseOpponent() {
+  const recent = [...new Set(data.games.filter(g => [g.player1,g.player2].includes(data.user.id)).map(g => g.player1 === data.user.id ? g.player2 : g.player1))];
+  const people = data.players.filter(p => p.id !== data.user.id).sort((a,b) => {
+    const rank = p => recent.includes(p.id) ? recent.indexOf(p.id) : Infinity;
+    return rank(a)-rank(b) || a.name.localeCompare(b.name);
+  });
+  modal(`<header class="record-header"><div class="eyebrow orange">PUT IT ON THE BOARD · 1 / 2</div><h2>Who did you play?</h2><p class="muted">Pick your opponent. Then straight to the score.</p></header><div class="record-scroll"><input id="opponent-search" type="search" placeholder="Find a player…" aria-label="Find a player"><p class="record-player-hint">RECENT OPPONENTS FIRST</p><div class="record-players">${people.map(p => `<button class="record-player" data-action="choose-opponent" data-opponent="${p.id}" data-search="${esc((p.name+' '+p.username).toLowerCase())}">${avatar(p)}<span><strong>${esc(p.name)}</strong><small>@${esc(p.username)}</small></span></button>`).join('')}</div><p id="opponent-empty" class="field-hint" ${people.length ? 'hidden' : ''}>No players found.</p></div><footer class="record-footer"><span class="field-hint">Choose a player to continue.</span><button class="btn ghost" data-action="close">Cancel</button></footer>`, {record:true,focus:'#opponent-search'});
+}
+function recordScores() {
+  const {game,opponent,matches,date,notes} = recordDraft, me = game ? player(game.player1) : data.user, other = player(opponent);
+  modal(`<header class="record-header"><div class="eyebrow orange">${game ? 'KEEP THE RECEIPTS HONEST' : 'PUT IT ON THE BOARD · 2 / 2'}</div><h2>${game ? 'Correct the score.' : 'How’d it go?'}</h2><p class="muted">${game ? 'The original scores stay in the game history.' : 'Best of three. First to two match wins.'}</p></header><form class="record-form" data-form="game" novalidate data-player1name="${esc(first(me))}" data-player2name="${esc(first(other))}" ${game ? `data-game="${game.id}" data-revision="${game.revision}"` : ''}><div class="record-scroll"><div class="record-matchup"><strong>${esc(first(me))}</strong><span>vs</span><strong>${esc(first(other))}</strong>${game ? '' : '<button type="button" class="quiet-link" data-action="change-opponent">Change</button>'}</div>${game ? '' : `<input type="hidden" name="opponent" value="${opponent}">`}${matchInputs(matches,first(me),first(other))}<small class="field-hint">Play to 11. At 10–10, choose Deuce finish.</small><div class="record-extras">${game ? '' : `<button type="button" class="quiet-link" data-action="record-extra" data-target="record-date" aria-expanded="false">${icon('activity')} <span id="record-date-label">${date === today ? 'Today' : esc(date)}</span> · Change</button>`}<button type="button" class="quiet-link" data-action="record-extra" data-target="record-note" aria-expanded="${!!notes}">${icon('edit')} Post a note</button></div>${game ? '' : `<div id="record-date" hidden><label for="date">When did you play?</label><input id="date" name="date" type="date" value="${date}" max="${today}" required></div>`}<div id="record-note" ${notes ? '' : 'hidden'}><label for="notes">Post a note <span class="muted">· optional</span></label><textarea id="notes" name="notes" maxlength="240" placeholder="A humble brag. A rematch request. An unbelievable rally.">${esc(notes)}</textarea><small class="field-hint">Your note appears in the feed with this game.</small></div></div><footer class="record-footer"><div class="record-status"><p class="series-status field-hint"></p><div class="form-error" role="alert"></div></div><button class="btn primary" type="submit">${game ? 'Save correction' : 'Record game'} ${icon('check')}</button></footer></form>`, {record:true,focus:'#m0a, input[name="winner0"]'});
   updateDecider(document.querySelector('form[data-form="game"]'));
 }
+function sizeRecordDialog() {
+  const overlay = document.querySelector('.record-overlay');
+  if (!overlay) return;
+  overlay.style.height = (window.visualViewport?.height || innerHeight) + 'px';
+  overlay.style.top = (window.visualViewport?.offsetTop || 0) + 'px';
+}
+window.visualViewport?.addEventListener('resize',sizeRecordDialog);
+window.visualViewport?.addEventListener('scroll',sizeRecordDialog);
+window.addEventListener('resize',sizeRecordDialog);
 let profileDraft;
 function editProfile(onboard = false) {
   if (!requireLogin()) return;
@@ -564,6 +573,25 @@ async function action(el) {
     case "record":
       recordGame(el.dataset.opponent);
       break;
+    case "choose-opponent":
+      recordDraft.opponent = el.dataset.opponent;
+      recordScores();
+      break;
+    case "change-opponent": {
+      const f = el.closest('form');
+      recordDraft.matches = [...f.querySelectorAll('[data-match]')].map(readMatch);
+      recordDraft.notes = f.elements.notes.value;
+      recordDraft.date = f.elements.date.value;
+      chooseOpponent();
+      break;
+    }
+    case "record-extra": {
+      const section = document.getElementById(el.dataset.target);
+      section.hidden = !section.hidden;
+      el.setAttribute('aria-expanded', !section.hidden);
+      if (!section.hidden) section.querySelector('input,textarea')?.focus();
+      break;
+    }
     case "share-game":
       if(!requireLogin()) break;
       try {
@@ -751,7 +779,14 @@ document.addEventListener("submit", async (e) => {
         else toast("You’re in. Welcome back.");
         break;
       case "game":
-        for(const el of f.elements) if(!/^(m[0-2][ab]|winner[0-2])$/.test(el.name) && el.willValidate && !el.reportValidity())return;
+        for(const el of f.elements) if(!/^(m[0-2][ab]|winner[0-2])$/.test(el.name) && el.willValidate && !el.checkValidity()) {
+          const section = el.closest('[hidden]');
+          if (section) {
+            section.hidden = false;
+            f.querySelector(`[data-target="${section.id}"]`)?.setAttribute('aria-expanded','true');
+          }
+          el.reportValidity();return;
+        }
         const matches=[...f.querySelectorAll("[data-match]")].filter(row=>!row.hidden).map(row=>readMatch(row));
         for(const k of Object.keys(b)) if(/^(m[0-2][ab]|winner[0-2])$/.test(k)) delete b[k];
         Object.assign(b,seriesScore(matches));
@@ -841,13 +876,18 @@ document.addEventListener("change", async (e) => {
 });
 document.addEventListener("change",e=>{
   const f=e.target.closest('form[data-form="game"]');if(!f)return;
+  if(e.target.name==='date')$('#record-date-label').textContent=e.target.value===today?'Today':e.target.value;
   if(e.target.name.startsWith('winner'))updateDecider(f);
-  if(e.target.name==='opponent'){
-    f.dataset.player2name=first(player(e.target.value));
-    [...f.querySelectorAll('[data-match]')].forEach(row=>{row.outerHTML=matchInput(Number(row.dataset.match),readMatch(row),[f.dataset.player1name,f.dataset.player2name]);});updateDecider(f);
-  }
 });
 document.addEventListener("input", (e) => {
+  if(e.target.id==='opponent-search') {
+    let found = 0;
+    document.querySelectorAll('.record-player').forEach(button => {
+      button.hidden = !button.dataset.search.includes(e.target.value.trim().toLowerCase());
+      if (!button.hidden) found++;
+    });
+    $('#opponent-empty').hidden = found > 0;
+  }
   if(e.target.closest('form[data-form="game"]') && /^m[0-2][ab]$/.test(e.target.name)) updateDecider(e.target.form);
   if(e.target.name === "text" && e.target.closest('[data-form="comment"]')) {
     const input=e.target, picker=input.closest("form").querySelector(".mention-picker");
@@ -869,6 +909,11 @@ document.addEventListener("input", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (!$("#modal-root").firstChild) return;
+  if(e.key==='Enter' && e.target.closest('.record-form') && /^m[0-2][ab]$/.test(e.target.name)) {
+    e.preventDefault();
+    const form=e.target.form, inputs=[...form.querySelectorAll('.score-inputs input')].filter(input=>!input.disabled);
+    (inputs[inputs.indexOf(e.target)+1] || form.querySelector('[type="submit"]')).focus();
+  }
   if (e.key === "Escape") closeModal();
   if (e.key === "Tab") {
     const focusable = [

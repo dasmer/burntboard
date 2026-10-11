@@ -2132,3 +2132,56 @@ form[data-form="game"]>label{margin-top:12px}form[data-form="game"] textarea{min
 form[data-form="game"] .series-status{margin:6px 0}
 
 .score-options{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}.score-options button{padding:8px 11px;border:1px solid #e3e3d9;border-radius:9px;background:#f5f5ef;color:#557566;font-size:12px;font-weight:600}.score-options button:hover{background:#edf1eb;border-color:#93aa9a}.result-tag{display:inline-block;background:#edf1eb;color:#557566;padding:5px 9px;border-radius:6px;font-size:11px;margin:8px 0}.result-tag.deuce{background:#fff0e6;color:#b04a24}.match-winners{display:flex;gap:10px;margin:10px 0}.match-winners label{position:relative;flex:1;margin:0!important;cursor:pointer}.match-winners input{position:absolute;opacity:0;width:1px;height:1px}.match-winners span{display:block;text-align:center;padding:12px;border:1px solid #dedbd2;border-radius:10px;font-size:13px}.match-winners input:checked+span{border-color:#557566;background:#edf1eb;color:#365344;box-shadow:inset 0 0 0 1px #557566}.match-winners input:checked+span:before{content:'✓ '}.match-winners input:focus-visible+span{outline:2px solid #f0532c;outline-offset:2px}.match-error{background:#fff0e6;padding:12px;border-radius:8px;color:#a34428;font-size:12px;margin:10px 0}.match-error[hidden]{display:none}.match-error button{display:block;margin-top:8px}
+
+/* Record flow: only the body scrolls; the submit action stays in view. */
+.record-overlay { bottom:auto; padding:20px; }
+.modal.record-dialog { max-width:560px; max-height:100%; padding:0; display:flex; flex-direction:column; overflow:hidden; }
+.record-header { padding:24px 26px 16px; border-bottom:1px solid var(--line); flex-shrink:0; }
+.record-header h2 { margin:9px 30px 8px 0; }
+.record-header p { margin:0; font-size:12px; }
+.record-form { display:flex; flex-direction:column; min-height:0; }
+.record-scroll { padding:20px 26px; overflow:auto; overscroll-behavior:contain; min-height:0; }
+.record-footer { flex-shrink:0; display:flex; align-items:center; gap:12px; padding:15px 26px; border-top:1px solid var(--line); background:var(--white); }
+.record-footer>.btn { margin-left:auto; flex-shrink:0; }
+.record-status { min-width:0; }
+.record-status .series-status { margin:0; }
+.record-status .form-error { margin-top:6px; }
+.record-matchup { display:flex; align-items:center; gap:9px; padding-bottom:17px; font-size:13px; }
+.record-matchup>span { font-size:11px; color:var(--muted); }
+.record-matchup .quiet-link { margin-left:auto; font-size:12px; }
+.record-dialog .series-match { border:1px solid var(--line); border-radius:12px; padding:13px; margin:0 0 12px; background:#f8f7f1; }
+.record-dialog .series-match legend { padding:0 5px; }
+.record-dialog .score-inputs { padding:0; margin:0; background:none; }
+.record-dialog .score-inputs label { margin:0 0 5px; font-size:10px; }
+.record-dialog .score-inputs input { height:50px; background:white; font-size:27px; appearance:textfield; }
+.record-dialog .score-inputs input::-webkit-inner-spin-button { appearance:none; }
+.record-dialog .score-options { gap:16px; margin:9px 0 0; }
+.record-dialog .score-options button { padding:0; background:none; border:0; font-size:10px; }
+.record-dialog .score-options button:hover { text-decoration:underline; }
+.record-dialog .match-winners { margin:8px 0; }
+.record-dialog .result-tag { margin:0 0 8px; }
+.record-dialog .series-match .field-hint { margin:0 0 8px; }
+.record-extras { display:flex; flex-wrap:wrap; gap:24px; margin:18px 0 8px; }
+.record-extras button { display:flex; align-items:center; gap:5px; font-size:12px; }
+.record-extras svg { width:13px; height:13px; }
+.record-player-hint { margin:20px 0 9px; font-size:9px; letter-spacing:2px; color:var(--muted); }
+.record-players { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.record-player { display:flex; align-items:center; gap:12px; padding:13px; border:1px solid var(--line); border-radius:12px; text-align:left; background:white; }
+.record-player strong { font-size:13px; }
+.record-player small { display:block; font-size:10px; color:var(--muted); margin-top:3px; overflow-wrap:anywhere; }
+.record-player span { min-width:0; }
+.record-player .avatar { flex-shrink:0; }
+.record-player:hover { border-color:var(--orange); background:#fff3ea; }
+.record-dialog [hidden] { display:none!important; }
+@media(max-width:600px) {
+  .record-overlay { padding:10px; }
+  .modal.record-dialog { border-radius:17px; }
+  .record-header { padding:19px 18px 13px; }
+  .record-header h2 { font-size:32px; }
+  .record-scroll { padding:16px 18px; }
+  .record-footer { padding:13px 18px; }
+  .record-players { gap:8px; }
+  .record-player { padding:11px; gap:8px; }
+  .record-player .avatar { width:33px; height:33px; font-size:18px; }
+  .record-status .field-hint { font-size:10px; }
+}
