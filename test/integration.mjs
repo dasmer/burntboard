@@ -35,7 +35,10 @@ async function login(suffix,kind='web') {
   return {email,auth,user};
 }
 const a=await login('a'),b=await login('b'),c=await login('c'),d=await login('d');
-check((await call('/state')).value.players,[],'Anonymous users cannot read clubhouse data');
+const publicState=(await call('/state')).value;
+check(publicState.players.some(p=>p.id===a.user.id),true,'Anonymous visitors can browse players');
+check(publicState.players.some(p=>'email' in p || 'notifications' in p),false,'Public players omit account fields');
+check(publicState.user,null);check(publicState.keys,[]);check(publicState.activity,[]);
 check((await call('/auth/request','POST',{email:'outsider@example.com'})).status,400);
 check((await call('/auth/request','POST',{email:'bob@am.useallowance.com'})).status,400,'Test sink does not expand signup allowlist');
 const body={opponent:b.user.id,matches:[{score1:11,score2:7},{score1:11,score2:9}],date:'2026-10-08',notes:'Integration test'};
@@ -54,6 +57,12 @@ for(const matches of [[win,win],[loss,loss],[win,loss,deuce],[loss,win,loss]]) {
 const key=randomUUID();
 const recorded=await call('/games','POST',body,a.auth,key);check(recorded.status,200);
 const id=recorded.value.id;
+const publicGame=(await call('/state?game='+id)).value.games.find(g=>g.id===id);
+check(publicGame.matches,body.matches,'Anonymous visitors can read a game directly');
+check('muted' in publicGame,false,'Anonymous games exclude notification preferences');
+for(const [path,method] of [['/games','POST'],['/games/'+id,'PATCH'],['/games/'+id+'/react','POST'],['/games/'+id+'/comments','POST'],['/games/'+id+'/subscription','PATCH'],['/me','PATCH'],['/keys','POST'],['/auth/logout','POST']]) {
+  check((await call(path,method,{})).status,401,'Public read access does not authorize writes');
+}
 check((await call('/games/'+id+'/share')).status,401,'Sharing requires a signed-in participant');
 check((await call('/games/'+id+'/share','GET',undefined,c.auth)).status,403,'Nonparticipants cannot publish a receipt');
 const shared=await call('/games/'+id+'/share','GET',undefined,a.auth);check(shared.status,200);
@@ -159,6 +168,9 @@ check(page1.games.length,100);
 const nextPage=await call('/state?player='+a.user.id+'&gamesBefore='+encodeURIComponent(page1.pagination.games),'GET',undefined,a.auth);check(nextPage.status,200);
 const page2=nextPage.value;
 check(page2.games.length,7,'Same-timestamp pagination must not lose games');
+const publicPage=(await call('/state?player='+a.user.id)).value;
+check(publicPage.games.length,100,'Public profile pagination is bounded');
+check((await call('/state?player='+a.user.id+'&gamesBefore='+encodeURIComponent(publicPage.pagination.games))).value.games.length,7,'Public pagination preserves all games');
 check(new Set([...page1.games,...page2.games].map(g=>g.id)).size,107);
 check(page1.standings.all.find(p=>p.id===a.user.id).played,107,'Standings include games beyond the first page');
 check(page1.rivalries.find(r=>r.id===a.user.id && r.opponent===b.user.id).played,107);
@@ -166,7 +178,7 @@ check((await call('/state?gamesBefore=invalid','GET',undefined,a.auth)).status,4
 const image='data:image/png;base64,'+(await sharp({create:{width:8,height:8,channels:3,background:'#739783'}}).png().toBuffer()).toString('base64');
 check((await call('/me','PATCH',{image},a.auth)).status,200,'Photo is decoded and stored in private InsForge storage');
 const photo=await fetch(origin+'/api/v1/photos/'+a.user.id,{headers:a.auth});check(photo.status,200);check(photo.headers.get('content-type'),'image/webp');
-check((await fetch(origin+'/api/v1/photos/'+a.user.id)).status,401);
+check((await fetch(origin+'/api/v1/photos/'+a.user.id)).status,200,'Player avatars are public');
 check((await call('/me','PATCH',{image:'data:image/png;base64,ZmFrZQ=='},a.auth)).status,400);
 check((await call('/me','PATCH',{image:null},a.auth)).status,200);
 check((await fetch(origin+'/api/v1/photos/'+a.user.id,{headers:a.auth})).status,404);
