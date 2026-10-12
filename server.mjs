@@ -58,6 +58,14 @@ async function api(req,res,url) {
     }
     return state(who,game,cursors,player);
   }
+  const photo=/^\/photos\/([^/]+)$/.exec(path);
+  if(photo && req.method==='GET') {
+    if(!uuid(photo[1])) throw error('Photo not found.',404);
+    const rows=await readQuery(()=>db.database.from('bb_players').select('image_key').eq('id',photo[1]).limit(1));
+    if(!rows[0]?.image_key) throw error('Photo not found.',404);
+    const blob=await readQuery(()=>db.storage.from('player-photos').download(rows[0].image_key));
+    res.setHeader('Content-Type','image/webp');res.end(Buffer.from(await blob.arrayBuffer()));return null;
+  }
   if(!who) throw error('Sign in to continue.',401);
   const share=/^\/games\/([^/]+)\/share$/.exec(path);
   if(share && req.method==='GET') {
@@ -70,14 +78,6 @@ async function api(req,res,url) {
   if(req.method==='POST' && path==='/auth/logout') {
     await rpc('bb_sign_out',{p_token:who.tokenHash});
     res.setHeader('Set-Cookie',cookie('',0));return {ok:true};
-  }
-  const photo=/^\/photos\/([^/]+)$/.exec(path);
-  if(photo && req.method==='GET') {
-    if(!uuid(photo[1])) throw error('Photo not found.',404);
-    const rows=await readQuery(()=>db.database.from('bb_players').select('image_key').eq('id',photo[1]).limit(1));
-    if(!rows[0]?.image_key) throw error('Photo not found.',404);
-    const blob=await readQuery(()=>db.storage.from('player-photos').download(rows[0].image_key));
-    res.setHeader('Content-Type','image/webp');res.end(Buffer.from(await blob.arrayBuffer()));return null;
   }
   if(path==='/me' && req.method==='PATCH') {
     const fields={};

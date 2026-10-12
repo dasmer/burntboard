@@ -16,7 +16,9 @@ Configure server credentials before starting. Open http://localhost:4173 for the
 
 ## Authentication and data
 
-Only exact @useallowance.com and @getburnt.ai addresses can join. Resend sends first-party, single-use six-digit codes, valid for ten minutes with three verification attempts. Browser sessions use HttpOnly cookies; personal agent keys are shown once, expire after 90 days, and can be revoked. Credentials are stored as hashes. The private InsForge bucket player-photos stores validated, resized WebP photos, served only after app authentication.
+Only exact @useallowance.com and @getburnt.ai addresses can join. Resend sends first-party, single-use six-digit codes, valid for ten minutes with three verification attempts. Browser sessions use HttpOnly cookies; personal agent keys are shown once, expire after 90 days, and can be revoked. Credentials are stored as hashes. The private InsForge bucket player-photos stores validated, resized WebP photos, served through the public app photo endpoint.
+
+Profiles, photos, game results, notes, comments, reactions, score-correction history, and standings can be read without an account. Emails, notification preferences/subscriptions, personal API keys, and account activity remain authenticated. The server projects public fields; database roles and the private storage bucket retain their existing permissions.
 
 Every mutation is authorized server-side. Only participants can correct scores; revisions prevent concurrent edits from overwriting each other. Match, comment, reaction, and subscription writes require Idempotency-Key. A database transaction saves the change, audit event, and email queue together. Public backend roles have no access to the clubhouse tables or mutation functions.
 
@@ -26,7 +28,7 @@ The Agents page creates a named personal key and a setup instruction containing 
 
 Participants can share a game from the feed, game detail, or recording receipt. The preview offers native sharing, Copy link, and Save card. Shared URLs serve a public game receipt with server-rendered Open Graph metadata and a 1200×630 PNG containing names, series result, match scores, date, and branding. Notes, comments, emails, photos, profiles, and activity history are excluded.
 
-Receipt links are unlisted signed capabilities: anyone holding one can view that receipt, but there is no public game listing. Corrections update the receipt and version its image URL; external platforms may retain their own preview caches. Rotating OTP_SECRET invalidates existing real receipt links. There is no individual link revocation. Demo receipts use separate process-local signatures and reset on restart. No database changes are required.
+Receipt links are unlisted signed capabilities: anyone holding one can view that receipt, and the main board also provides public game browsing. Corrections update the receipt and version its image URL; external platforms may retain their own preview caches. Rotating OTP_SECRET invalidates existing real receipt links. There is no individual link revocation. Demo receipts use separate process-local signatures and reset on restart. No database changes are required.
 
 ## Testing without touching production
 
@@ -52,7 +54,7 @@ The app requires the Node server and uses InsForge hosting; GitHub Pages is reti
 3. Preserve the server-only INSFORGE_URL, INSFORGE_API_KEY, RESEND_API_KEY, OTP_SECRET, APP_ENV=production, HTTPS APP_ORIGIN, ORIGIN_SECRET, and TRUST_PROXY=true configuration. Production must omit EMAIL_TEST_SINK and EMAIL_TEST_RECIPIENTS. Keep secrets out of the frontend and image build; keep the player-photos bucket private.
 4. Update the existing compute service with `npx -y @insforge/cli compute deploy . --name burntboard --always-on --env-file .env.production`. HOST=0.0.0.0 and PORT=8080 are set in the image. Always-on keeps the email queue worker running between visits.
 5. Deploy `hosting/` with `npx -y @insforge/cli deployments deploy hosting` only when routing changes. Keep ORIGIN_SECRET identical on frontend and compute. The routing sends the client, API, photos, and skill to the same Node process. Vercel replaces the secret header; the server rejects direct requests without it before trusting visitor-IP headers. Preserve the domain configuration and www redirect. See [Vercel's documented proxy configuration](https://vercel.com/docs/routing/rewrites#restricting-your-origin-to-vercel-traffic).
-6. Verify HTTPS, app assets, anonymous API responses, direct-origin rejection, and rejection of retired /demo routes. Keep synthetic game writes and email fixture checks in the test project.
+6. Verify HTTPS, app assets, public read responses, direct-origin rejection, and rejection of retired /demo routes. Keep synthetic game writes and email fixture checks in the test project.
 
 Production is linked as burntboard-production (e4bf0edf-79f4-47b0-ba08-a459cd6a7955). The compute service is b79824a0-7ffe-49a8-9806-9a79e7c8c11b. Credentials remain in ignored local configuration and encrypted hosting settings. Future releases update the existing compute service by name; deploy hosting/ only when routing changes. Neither deployment automatically follows GitHub merges.
 
