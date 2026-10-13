@@ -1,3 +1,4 @@
+import {weeklyEmail} from './weekly-recap.mjs';
 import {Resend} from 'resend';
 import {config, db, query} from './config.mjs';
 import {otpEmail,activityEmail} from './email-templates.mjs';
@@ -9,6 +10,9 @@ export async function sendEmail({to,subject,text,html,key}) {
   const {error} = await resend.emails.send({from:config.from,to:recipient,subject,text,html}, {idempotencyKey:key});
   if (error) throw new Error(error.message || 'Email delivery failed.');
 }
+export async function queueWeeklyRecap() {
+  await query(db.database.rpc('bb_queue_weekly_recap',{}));
+}
 export async function sendOtp(email,code,key) {
   await sendEmail({to:email,subject:'Your Burntboard sign-in code',...otpEmail({origin:config.origin,code}),key});
 }
@@ -18,16 +22,30 @@ export async function deliverOutbox(eventId=null) {
   busy=true;
   try {
     const rows=await query(db.database.rpc('bb_claim_emails',{p_event:eventId}));
+    const weeklySnapshots=new Map();
     for (const item of rows) {
       try {
         const game=item.payload.action.startsWith('game.') ? (await query(db.database.from('bb_games').select('player1,player2').eq('id',item.payload.gameId).limit(1)))[0] : null;
         const ids=[...new Set([item.recipient,item.payload.actor,game?.player1,game?.player2].filter(Boolean))];
-        const people=await query(db.database.from('bb_players').select('id,email,name').in('id',ids).limit(ids.length));
+        const people=await query(db.database.from('bb_players').select('id,email,name,weekly_recap').in('id',ids).limit(ids.length));
         const recipient=people.find(p=>p.id===item.recipient), actor=people.find(p=>p.id===item.payload.actor);
         if (!recipient) throw new Error('Recipient not found.');
-        const template=activityEmail({origin:config.origin,payload:item.payload,actorName:actor?.name || 'A player',recipientId:recipient.id,
+        let template;
+        if(item.payload.action==='weekly.recap') {
+          if(!recipient.weekly_recap) {
+            await query(db.database.from('bb_outbox').update({sent_at:new Date().toISOString(),leased_until:null,last_error:'Unsubscribed before delivery'}).eq('id',item.id));
+            continue;
+          }
+          const week=item.payload.weekStart;
+          if(!weeklySnapshots.has(week)) {
+            const runs=await query(db.database.from('bb_weekly_runs').select('snapshot').eq('week_start',week).limit(1));
+            if(!runs.length)throw Error('Weekly snapshot not found');
+            weeklySnapshots.set(week,runs[0].snapshot);
+          }
+          template=weeklyEmail({snapshot:weeklySnapshots.get(week),recipientId:recipient.id,origin:config.origin,key:config.otpSecret});
+        } else template=activityEmail({origin:config.origin,payload:item.payload,actorName:actor?.name || 'A player',recipientId:recipient.id,
           player1Name:people.find(p=>p.id===game?.player1)?.name,player2Name:people.find(p=>p.id===game?.player2)?.name});
-        await sendEmail({to:recipient.email,subject:item.subject,...template,key:`bb-${item.id}`});
+        await sendEmail({to:recipient.email,subject:template.subject || item.subject,...template,key:`bb-${item.id}`});
         await query(db.database.from('bb_outbox').update({sent_at:new Date().toISOString(),leased_until:null,last_error:null}).eq('id',item.id));
       } catch {
         // Persist a retry without logging private messages, codes, or recipients.

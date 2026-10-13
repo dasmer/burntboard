@@ -1,3 +1,4 @@
+import {weeklyTokenPlayer} from './server/weekly-recap.mjs';
 import http from 'node:http';
 import {seriesScore} from './series.mjs';
 import {readFile} from 'node:fs/promises';
@@ -6,7 +7,7 @@ import sharp from 'sharp';
 import {config,db,query,readQuery,rpc} from './server/config.mjs';
 import {identity,error,requestCode,verifyCode,cookie,hash,secret} from './server/auth.mjs';
 import {state} from './server/state.mjs';
-import {deliverOutbox} from './server/email.mjs';
+import {deliverOutbox,queueWeeklyRecap} from './server/email.mjs';
 import {gameShareURL,serveGameShare} from './game-share.mjs';
 import {checkProxy,clientIp} from './server/proxy.mjs';
 const root=resolve('.');
@@ -57,6 +58,19 @@ async function api(req,res,url) {
       }
     }
     return state(who,game,cursors,player);
+  }
+  if(path==='/weekly-preference' && ['GET','POST'].includes(req.method)) {
+    const token=req.method==='GET'?url.searchParams.get('token'):body.token;
+    const target=token?weeklyTokenPlayer(token,config.otpSecret):who?.user.id;
+    if(!target)throw error('This preference link is invalid. Sign in to manage your emails.',401);
+    if(req.method==='POST') {
+      if(typeof body.enabled!=='boolean')throw error('Choose an email preference.');
+      if(token && body.enabled!==false)throw error('Sign in to subscribe again.',403);
+      return rpc('bb_weekly_preference',{p_player:target,p_enabled:body.enabled});
+    }
+    const rows=await readQuery(()=>db.database.from('bb_players').select('weekly_recap').eq('id',target).limit(1));
+    if(!rows.length)throw error('Player not found.',404);
+    return {enabled:rows[0].weekly_recap};
   }
   const photo=/^\/photos\/([^/]+)$/.exec(path);
   if(photo && req.method==='GET') {
@@ -156,5 +170,9 @@ http.createServer(async(req,res)=>{
     if(!e.status) console.error('Request failed.');
   }
 }).listen(Number(process.env.PORT || 4173),process.env.HOST || '127.0.0.1',()=>console.log(`Burntboard ${config.environment}: ${config.origin}`));
-const delivery=setInterval(()=>{if(config.deliveryEnabled) deliverOutbox().catch(()=>console.error('Email queue unavailable.'));},15000);
+const delivery=setInterval(()=>{
+  if(!config.deliveryEnabled)return;
+  queueWeeklyRecap().catch(()=>console.error('Weekly recap scheduler unavailable.'));
+  deliverOutbox().catch(()=>console.error('Email queue unavailable.'));
+},15000);
 delivery.unref();
