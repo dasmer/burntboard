@@ -370,6 +370,7 @@ function agents() {
 function render() {
   clearReactionEffect();
   const [route = "feed", id] = location.hash.slice(1).split("/");
+  if(route==='weekly-emails') { weeklyPreferencePage(id); return; }
   const page = [
     "feed",
     "leaderboard",
@@ -486,8 +487,18 @@ function editProfile(onboard = false) {
 function account() {
   if (!data.user) return signIn();
   modal(
-    `<div class="eyebrow orange">YOUR CORNER</div><h2>Hey, ${esc(first(data.user))}.</h2><p class="muted">${esc(data.user.email)}</p><a class="btn soft full" href="#profile/${data.user.id}" data-action="close">${icon("players")} My player card</a><button class="btn soft full" data-action="edit-profile" style="margin-top:10px">${icon("edit")} Edit profile</button><a class="btn soft full" href="#activity" data-action="close" style="margin-top:10px">${icon("activity")} Activity history</a><label style="display:flex;gap:10px;align-items:center;margin-top:24px"><input style="width:auto" type="checkbox" data-preference="notifications" ${data.user.notifications ? "checked" : ""}> Match and comment emails</label><small class="field-hint">Sign-in and agent security emails stay on.</small><button class="btn ghost full" data-action="logout" style="margin-top:23px">${icon("logout")} Sign out</button>`,
+    `<div class="eyebrow orange">YOUR CORNER</div><h2>Hey, ${esc(first(data.user))}.</h2><p class="muted">${esc(data.user.email)}</p><a class="btn soft full" href="#profile/${data.user.id}" data-action="close">${icon("players")} My player card</a><button class="btn soft full" data-action="edit-profile" style="margin-top:10px">${icon("edit")} Edit profile</button><a class="btn soft full" href="#activity" data-action="close" style="margin-top:10px">${icon("activity")} Activity history</a><label style="display:flex;gap:10px;align-items:center;margin-top:24px"><input style="width:auto" type="checkbox" data-preference="notifications" ${data.user.notifications ? "checked" : ""}> Match and comment emails</label><small class="field-hint">Sign-in and agent security emails stay on.</small><label style="display:flex;gap:10px;align-items:center;margin-top:18px"><input style="width:auto" type="checkbox" data-preference="weekly" ${data.user.weeklyRecap ? "checked" : ""}> Weekly recap</label><small class="field-hint">Friday at 7:30 PM Pacific. This week’s winner and their games.</small><button class="btn ghost full" data-action="logout" style="margin-top:23px">${icon("logout")} Sign out</button>`,
   );
+}
+function weeklyPreferencePage(token) {
+  const currentHash=location.hash;
+  document.title='Weekly recap emails · Burntboard';
+  $('#app').innerHTML='<main style="max-width:560px;margin:60px auto;padding:20px"><section class="panel"><div class="eyebrow orange">BURNTBOARD</div><h1>Weekly recap emails</h1><p id="weekly-status" class="muted">Loading your preference…</p><div id="weekly-controls"></div><a href="#feed" class="quiet-link" style="display:block;margin-top:25px">Back to the board</a></section></main>';
+  api('/weekly-preference?token='+encodeURIComponent(token || '')).then(result=>{
+    if(location.hash!==currentHash)return;
+    $('#weekly-status').textContent=result.enabled?'You receive This week at the table on Fridays at 7:30 PM Pacific. Tap Unsubscribe to stop weekly recaps.':'You’re unsubscribed from weekly recaps.';
+    $('#weekly-controls').innerHTML=result.enabled?`<button class="btn primary" style="margin-top:20px" data-action="weekly-unsubscribe" data-token="${esc(token)}">Unsubscribe</button>`:'';
+  }).catch(()=>{if(location.hash===currentHash)$('#weekly-status').textContent='This link is invalid. Sign in and open your account to manage weekly recaps.';});
 }
 const pendingReactions = new Set();
 let clearReactionEffect = () => {};
@@ -570,6 +581,11 @@ async function action(el) {
       setupToken = null;
       closeModal();
       await refresh();
+      break;
+    case "weekly-unsubscribe":
+      el.disabled=true;
+      try { await api("/weekly-preference","POST",{token:el.dataset.token,enabled:false}); weeklyPreferencePage(el.dataset.token); }
+      catch(err) { el.disabled=false;throw err; }
       break;
     case "record":
       recordGame(el.dataset.opponent);
@@ -851,6 +867,11 @@ document.addEventListener("submit", async (e) => {
   }
 });
 document.addEventListener("change", async (e) => {
+  if(e.target.dataset.preference === "weekly") {
+    try {await api("/weekly-preference","POST",{enabled:e.target.checked});await refresh();toast("Weekly recap preference saved.");}
+    catch(err) {e.target.checked=!e.target.checked;toast(err.message);}
+    return;
+  }
   if(e.target.dataset.preference === "notifications") {
     try {await api("/me","PATCH",{notifications:e.target.checked});await refresh();toast("Email preferences saved.");}
     catch(err) {e.target.checked=!e.target.checked;toast(err.message);}

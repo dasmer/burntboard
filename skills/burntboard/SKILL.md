@@ -33,3 +33,9 @@ Report the recorded score and match link `ORIGIN/#match/GAME_ID` after success. 
 Each game is best of three matches. Each match is to 11, with exact finishes 11–0 through 11–9, or a deuce finish without numerical scores. Supply two matches for a 2–0 sweep, or three for a 2–1 finish; never include a third after two consecutive wins. Score fields in each match always follow the stored player1/player2 order, even when player2 corrects it. Ask which result type and who won when numerical scores are unavailable; never invent points. Returned game score1/score2 are match wins, and matches holds individual scores. Standings count game wins/losses; numerical points are not ranked.
 
 Match result options: exact `{ "score1": 11, "score2": 7 }` (optional `type: "exact"`); deuce `{ "type": "deuce", "winner": 1 }`; forgotten score `{ "type": "unrecorded", "winner": 2 }`. Winner is the fixed player slot, **1 for player1, 2 for player2**, not the caller: on creation player1 is the caller; on correction use the original game’s player order from /state. Never infer or invent a winner or score. Non-exact results must omit score fields. Exact scores above 11 or 11–10 are rejected: use deuce only when the user confirms it. Mixed types count equally; first to two match wins takes the game. No point rankings.
+
+## Weekly recap preference
+
+- Authenticated `GET /weekly-preference` reads your separate weekly recap setting.
+- Authenticated `POST /weekly-preference`: `{ "enabled": false }` opts out; `{ "enabled": true }` opts back in. This always applies to the key owner's account.
+- Weekly recaps default on and send Fridays at 7:30 PM Pacific. Email preference links only open a status page; unsubscribe requires an explicit button click. Do not follow a link with a write unless the user requests unsubscribing.
