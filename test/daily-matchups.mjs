@@ -36,3 +36,13 @@ const namedEmail=dailyEmail({snapshot:named,recipientId:id(0),origin:'https://bu
 assert.equal(namedEmail.subject,'🏓 '+pairs.filter(p=>p.includes(id(0))).map(p=>named.players.find(x=>x.id===p.find(x=>x!==id(0))).name.split(' ')[0]).join(' & ')+' are your two today');
 assert(namedEmail.html.includes('Wednesday, October 14'));
 for(const noisy of ['Best of three','Suggestions, not assignments','Your opponents got the same','Open the page, then tap']) {assert(!namedEmail.html.includes(noisy));assert(!namedEmail.text.includes(noisy));}
+
+assert(!namedEmail.html.includes('Yesterday at the table'),'Omit empty recap for prior snapshots');
+assert(!dailyEmail({snapshot:{...named,yesterdayGames:[]},recipientId:id(0),origin:'https://burntboard.com',key:'key'}).html.includes('Yesterday at the table'));
+const resultPlayer={id:id(5),name:'<script>Other Player',avatar:'<x>',image:'/api/v1/photos/'+id(5)};
+const withResults={...named,yesterdayGames:[{id:'game-a',player1:named.players[0],player2:resultPlayer,score1:2,score2:1},{id:'game-b',player1:resultPlayer,player2:named.players[0],score1:0,score2:2}]};
+const recapEmail=dailyEmail({snapshot:withResults,recipientId:id(0),origin:'https://burntboard.com',key:'key'});
+assert(recapEmail.html.includes('Yesterday at the table'));assert(recapEmail.html.indexOf('Yesterday at the table')>recapEmail.html.indexOf('View player'));
+assert(recapEmail.html.includes('&lt;script&gt;Other Player'));assert(!recapEmail.html.includes('<script>'));assert(recapEmail.html.includes('/api/v1/photos/'+id(5)));
+assert(recapEmail.html.includes('/#match/game-a'));assert(recapEmail.html.includes('/#match/game-b'));assert(recapEmail.text.includes('Dasmer Singh 2–1 <script>Other Player'));
+assert(!recapEmail.html.includes('Match 1'),'Recap contains series totals only');assert.equal(recapEmail.subject,namedEmail.subject,'Recap does not change opponent subject');

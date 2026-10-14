@@ -84,3 +84,8 @@ Daily emails use the branded Resend sender and avatar cards linking to player pr
 Daily matchups in account settings controls both email receipt and participation. `/#daily-emails/TOKEN` opens a read-only preference page; explicit Unsubscribe opts out without login. Purpose-separated signatures cannot affect weekly settings, authenticate, or resubscribe. Signed-in humans and agents can GET/POST `/api/v1/daily-preference` with `{ "enabled": true/false }` for their own account. The preference is excluded from public roster data.
 
 Merge the weekly recap prerequisite (PR #26), then apply `20261014080000_daily-matchups.sql` before deploying this app. Validate with `npm test`, `npm run test:integration`, and `npm run test:daily-integration` in the isolated test backend with delivery disabled. Transport tests intercept Resend; no real emails are sent.
+
+
+The daily email ends with Yesterday at the table when any games were played on the previous Pacific calendar date and recorded by the 8 AM cutoff. Each compact row shows avatars, names and series totals, with names/results linking to the game. All public results are included, regardless of the players' email preferences; no notes, comments, individual match scores or account fields are included. The result snapshot uses the latest score history at or before the cutoff, then stays fixed across queue retries. Empty days omit the section; previously frozen snapshots are not backfilled or re-sent.
+
+Apply `20261014180000_daily-results.sql` before deploying the daily recap update. It replaces the snapshot function only, preserves its privileged access, and leaves existing runs and delivery safeguards intact.
