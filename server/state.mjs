@@ -1,7 +1,7 @@
 import {db,readQuery} from './config.mjs';
 const playerFields='id,name,username,bio,avatar,color,image_key,created_at';
 export const player=(p,account=false)=>({id:p.id,name:p.name,username:p.username,bio:p.bio,avatar:p.avatar,color:p.color,
-  image:p.image_key?`/api/v1/photos/${p.id}`:null,...(account?{email:p.email,notifications:p.notifications,weeklyRecap:p.weekly_recap}:{})});
+  image:p.image_key?`/api/v1/photos/${p.id}`:null,...(account?{email:p.email,notifications:p.notifications,weeklyRecap:p.weekly_recap,dailyMatchups:p.daily_matchups}:{})});
 const event=(e)=>({id:e.id,actor:e.actor,gameId:e.game_id,action:e.action,text:e.description,agent:e.agent,
   before:e.before_data,after:e.after_data,createdAt:e.created_at});
 const publicResult=value=>value && Object.fromEntries(['score1','score2','matches','notes'].filter(key=>key in value).map(key=>[key,value[key]]));

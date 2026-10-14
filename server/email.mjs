@@ -1,4 +1,5 @@
 import {weeklyEmail} from './weekly-recap.mjs';
+import {dailyPairs,dailyEmail} from './daily-matchups.mjs';
 import {Resend} from 'resend';
 import {config, db, query} from './config.mjs';
 import {otpEmail,activityEmail} from './email-templates.mjs';
@@ -12,6 +13,10 @@ export async function sendEmail({to,subject,text,html,key}) {
 }
 export async function queueWeeklyRecap() {
   await query(db.database.rpc('bb_queue_weekly_recap',{}));
+}
+export async function queueDailyMatchups() {
+  const snapshot=await query(db.database.rpc('bb_daily_snapshot',{}));
+  if(snapshot)await query(db.database.rpc('bb_queue_daily_matchups',{p_day:snapshot.day,p_pairs:dailyPairs(snapshot)}));
 }
 export async function sendOtp(email,code,key) {
   await sendEmail({to:email,subject:'Your Burntboard sign-in code',...otpEmail({origin:config.origin,code}),key});
@@ -27,11 +32,21 @@ export async function deliverOutbox(eventId=null) {
       try {
         const game=item.payload.action.startsWith('game.') ? (await query(db.database.from('bb_games').select('player1,player2').eq('id',item.payload.gameId).limit(1)))[0] : null;
         const ids=[...new Set([item.recipient,item.payload.actor,game?.player1,game?.player2].filter(Boolean))];
-        const people=await query(db.database.from('bb_players').select('id,email,name,weekly_recap').in('id',ids).limit(ids.length));
+        const people=await query(db.database.from('bb_players').select('id,email,name,weekly_recap,daily_matchups').in('id',ids).limit(ids.length));
         const recipient=people.find(p=>p.id===item.recipient), actor=people.find(p=>p.id===item.payload.actor);
         if (!recipient) throw new Error('Recipient not found.');
         let template;
-        if(item.payload.action==='weekly.recap') {
+        if(item.payload.action==='daily.matchups') {
+          const run=(await query(db.database.from('bb_daily_runs').select('snapshot,cutoff').eq('day',item.payload.day).limit(1)))[0];
+          if(!run)throw Error('Daily snapshot not found');
+          const opponents=run.snapshot.pairs.filter(pair=>pair.includes(recipient.id)).flat().filter(id=>id!==recipient.id);
+          const active=opponents.length?await query(db.database.from('bb_players').select('id,daily_matchups').in('id',opponents).limit(opponents.length)):[];
+          template=recipient.daily_matchups&&Date.now()<Date.parse(run.cutoff)+7200000?dailyEmail({snapshot:run.snapshot,recipientId:recipient.id,origin:config.origin,key:config.otpSecret,activeIds:active.filter(p=>p.daily_matchups).map(p=>p.id)}):null;
+          if(!template) {
+            await query(db.database.from('bb_outbox').update({sent_at:new Date().toISOString(),leased_until:null,last_error:'Daily lineup expired or no participating opponents'}).eq('id',item.id));
+            continue;
+          }
+        } else if(item.payload.action==='weekly.recap') {
           if(!recipient.weekly_recap) {
             await query(db.database.from('bb_outbox').update({sent_at:new Date().toISOString(),leased_until:null,last_error:'Unsubscribed before delivery'}).eq('id',item.id));
             continue;

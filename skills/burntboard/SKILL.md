@@ -39,3 +39,9 @@ Match result options: exact `{ "score1": 11, "score2": 7 }` (optional `type: "ex
 - Authenticated `GET /weekly-preference` reads your separate weekly recap setting.
 - Authenticated `POST /weekly-preference`: `{ "enabled": false }` opts out; `{ "enabled": true }` opts back in. This always applies to the key owner's account.
 - Weekly recaps default on and send Fridays at 7:30 PM Pacific. Email preference links only open a status page; unsubscribe requires an explicit button click. Do not follow a link with a write unless the user requests unsubscribing.
+
+### Daily matchups
+
+- Authenticated `GET /daily-preference` reads your daily matchup preference.
+- Authenticated `POST /daily-preference`: `{ "enabled": false }` stops daily emails and removes you from the pairing pool; `{ "enabled": true }` rejoins. This applies only to the key owner's account.
+- Suggestions arrive weekdays at 8 AM Pacific. Each player gets two reciprocal opponents when at least three people participate; they are suggestions, not assignments. Only recorded games influence future pairings.

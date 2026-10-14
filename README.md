@@ -64,10 +64,23 @@ Each game is a completed best-of-three series: two matches for a sweep, three wh
 
 ## Weekly recap
 
-Registered players default into a separate Weekly recap preference. The existing always-on server checks the database schedule every 15 seconds: Friday at 7:30 PM America/Los_Angeles (DST-aware), with up to 24 hours of outage catch-up. The recap covers games dated Sunday through Friday and recorded by Friday's cutoff. Result history reconstructs corrections as of the cutoff. Empty weeks are recorded without emails; repeated/concurrent checks cannot enqueue a second recap.
+Registered players default into a separate Weekly recap preference. The existing always-on server checks the database schedule once per minute: Friday at 7:30 PM America/Los_Angeles (DST-aware), with up to 24 hours of outage catch-up. The recap covers games dated Sunday through Friday and recorded by Friday's cutoff. Result history reconstructs corrections as of the cutoff. Empty weeks are recorded without emails; repeated/concurrent checks cannot enqueue a second recap.
 
 One stored weekly snapshot drives every recipient's winner-focused email. Leaders are ranked by game wins, then fewest losses; all tied leaders get crowned cards. Each leader's full game table includes losses and opponent avatars. Copy and subjects use fixed templates, never an LLM. It comes from Burntboard <info@burntboard.com> through the existing Resend outbox, with stable delivery idempotency keys. Preference is checked again before delivery so a queued email can be cancelled by opting out.
 
 Manage weekly recap emails opens `/#weekly-emails/TOKEN`; GET only reads the status. The player must tap Unsubscribe on the site. This scoped signed link needs no login and can only opt out of weekly recaps, not authenticate, subscribe, or change another preference. Authenticated players can enable/disable Weekly recap in their account (or POST /api/v1/weekly-preference with an enabled boolean). Rotating OTP_SECRET invalidates old preference links; signed-in account controls still work.
 
 Apply `20261013200000_weekly-recap.sql` to the intended backend before deploying the app. It adds the default-on player preference, a private weekly snapshot table, and privileged scheduling/preference functions; it does not recreate existing tables. The existing production compute service must remain always-on. Validate with `npm test`, `npm run test:integration`, and `npm run test:weekly-integration` only against the isolated test project with EMAIL_DELIVERY_ENABLED=false. Recap delivery tests intercept Resend; they do not send real email.
+
+
+## Daily matchups
+
+Registered players default into Daily matchups, separate from weekly and social emails. Monday–Friday at 8 AM America/Los_Angeles, the always-on worker freezes the opted-in roster and recorded games from the preceding 28 calendar days. Signup after the cutoff waits until the next workday. The scheduler checks once per minute; delivery continues every 15 seconds. Brief outages catch up until 10 AM Pacific; later sends are cancelled rather than sending stale morning recommendations.
+
+The server builds one reciprocal lineup: two distinct opponents per person, one with two participants, none with fewer than two. A deterministic cheapest-insertion seed and improving edge swaps minimize total recent pair game count first, then recency penalties, then date-seeded ties. This is a bounded heuristic, not a guarantee of the mathematical global optimum. It handles odd rosters and can split into smaller groups to avoid repeats. Only actual recorded games influence history; suggestions never count as played. No skill ratings, LLM, acceptance workflow, or reminders.
+
+Daily emails use the branded Resend sender and avatar cards linking to player profiles. Roster/history/pairs persist in a private daily snapshot; locked queue finalization and existing outbox idempotency prevent duplicate emails on retries or concurrent servers. Recipient and opponent participation are rechecked before sending; a late opt-out can reduce another person's email to one opponent or cancel it. Emails already delivered cannot be retracted.
+
+Daily matchups in account settings controls both email receipt and participation. `/#daily-emails/TOKEN` opens a read-only preference page; explicit Unsubscribe opts out without login. Purpose-separated signatures cannot affect weekly settings, authenticate, or resubscribe. Signed-in humans and agents can GET/POST `/api/v1/daily-preference` with `{ "enabled": true/false }` for their own account. The preference is excluded from public roster data.
+
+Merge the weekly recap prerequisite (PR #26), then apply `20261014080000_daily-matchups.sql` before deploying this app. Validate with `npm test`, `npm run test:integration`, and `npm run test:daily-integration` in the isolated test backend with delivery disabled. Transport tests intercept Resend; no real emails are sent.
