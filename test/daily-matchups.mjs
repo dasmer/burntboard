@@ -21,7 +21,12 @@ const variants=new Set(Array.from({length:10},(_,i)=>JSON.stringify(dailyPairs({
 const token=dailyToken(id(0),'key');assert.equal(dailyTokenPlayer(token,'key'),id(0));assert.equal(dailyTokenPlayer(token,'wrong'),null);assert.equal(dailyTokenPlayer(weeklyToken(id(0),'key'),'key'),null,'Weekly links cannot alter daily preferences');
 const snapshot={...s,pairs,players:s.players.map(p=>({...p,name:'<b>'+p.name}))};
 const email=dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key'});
-assert.equal(email.subject,'🏓 Your two for today · Burntboard');assert(email.html.includes('&lt;b&gt;'));assert(!email.html.includes('<b>Player'));assert(email.html.includes('daily-emails/'));assert(email.text.includes('No games together in the past four weeks.'));
+assert.equal(email.subject,'🏓 Your two for today · Burntboard');assert(email.html.includes('&lt;b&gt;'));assert(!email.html.includes('<b>Player'));assert(email.html.includes('daily-emails/'));assert(email.text.includes('A fresh matchup—no games together in four weeks.'));
+const opponent=pairs.find(p=>p.includes(id(0))).find(p=>p!==id(0));
+for(const [lastPlayed,expected] of [['2026-10-13','Back to the table—last played yesterday.'],['2026-10-02','Time to catch up—last played 12 days ago.']]) {
+ const recent=dailyEmail({snapshot:{...snapshot,history:[{player1:id(0),player2:opponent,games:2,lastPlayed}]},recipientId:id(0),origin:'https://burntboard.com',key:'key'});
+ assert(recent.html.includes(expected));assert(recent.text.includes(expected),'Relative copy uses the frozen lineup date');
+}
 assert.equal(dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key',activeIds:[]}),null);
 const one=dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key',activeIds:[pairs.find(p=>p.includes(id(0))).find(p=>p!==id(0))]});assert(one.subject.includes('Your opponent'));
 console.log('Daily pairing checks passed: reciprocal two-opponent lineups, small/odd/even rosters, variety/recency priorities, stable rotating ties, scoped tokens and escaped emails.');

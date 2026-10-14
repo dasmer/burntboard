@@ -49,7 +49,12 @@ export function dailyEmail({snapshot,recipientId,origin,key,activeIds}) {
   const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const opponents=snapshot.pairs.filter(pair=>pair.includes(recipientId)).map(pair=>snapshot.players.find(p=>p.id===pair.find(id=>id!==recipientId))).filter(p=>p&&(!activeIds||activeIds.includes(p.id)));
   if(!opponents.length)return null;
-  const reason=p=>{const h=snapshot.history.find(h=>[h.player1,h.player2].includes(recipientId)&&[h.player1,h.player2].includes(p.id));return h?`${h.games} ${Number(h.games)===1?'game':'games'} together in the past four weeks. Last played ${h.lastPlayed}.`:'No games together in the past four weeks.';};
+  const reason=p=>{
+    const h=snapshot.history.find(h=>[h.player1,h.player2].includes(recipientId)&&[h.player1,h.player2].includes(p.id));
+    if(!h)return 'A fresh matchup—no games together in four weeks.';
+    const days=Math.round((Date.parse(snapshot.day)-Date.parse(h.lastPlayed))/86400000);
+    return days===1?'Back to the table—last played yesterday.':`Time to catch up—last played ${days} days ago.`;
+  };
   const preference=origin+'/#daily-emails/'+dailyToken(recipientId,key),title=opponents.length===2?'Your two for today.':'Your opponent for today.';
   const avatar=p=>p.image?`<img src="${e(origin+p.image)}" width="72" height="72" alt="" style="border-radius:50%;display:block">`:`<span style="font-size:42px">${e(p.avatar||'🏓')}</span>`;
   const cards=opponents.map(p=>`<tr><td style="padding:20px 24px;border-top:1px solid #e3e5db"><table role="presentation" width="100%"><tr><td width="88">${avatar(p)}</td><td><h2 style="margin:0 0 8px;font-size:24px">${e(p.name)}</h2><p style="margin:0;color:#557566;font-size:14px;line-height:1.5">${e(reason(p))}</p></td></tr></table><p style="margin:18px 0 0"><a href="${e(origin)}/#profile/${e(p.id)}" style="color:#f0532c;font-weight:bold;text-decoration:none">Meet at the table →</a></p></td></tr>`).join('');
