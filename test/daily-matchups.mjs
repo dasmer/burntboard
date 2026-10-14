@@ -21,12 +21,18 @@ const variants=new Set(Array.from({length:10},(_,i)=>JSON.stringify(dailyPairs({
 const token=dailyToken(id(0),'key');assert.equal(dailyTokenPlayer(token,'key'),id(0));assert.equal(dailyTokenPlayer(token,'wrong'),null);assert.equal(dailyTokenPlayer(weeklyToken(id(0),'key'),'key'),null,'Weekly links cannot alter daily preferences');
 const snapshot={...s,pairs,players:s.players.map(p=>({...p,name:'<b>'+p.name}))};
 const email=dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key'});
-assert.equal(email.subject,'🏓 Your two for today · Burntboard');assert(email.html.includes('&lt;b&gt;'));assert(!email.html.includes('<b>Player'));assert(email.html.includes('daily-emails/'));assert(email.text.includes('A fresh matchup—no games together in four weeks.'));
+assert.equal(email.subject,'🏓 <b>Player & <b>Player are your two today');assert(email.html.includes('&lt;b&gt;'));assert(!email.html.includes('<b>Player'));assert(email.html.includes('daily-emails/'));assert(email.text.includes('A fresh matchup—no games together in four weeks.'));
 const opponent=pairs.find(p=>p.includes(id(0))).find(p=>p!==id(0));
 for(const [lastPlayed,expected] of [['2026-10-13','Back to the table—last played yesterday.'],['2026-10-02','Time to catch up—last played 12 days ago.']]) {
  const recent=dailyEmail({snapshot:{...snapshot,history:[{player1:id(0),player2:opponent,games:2,lastPlayed}]},recipientId:id(0),origin:'https://burntboard.com',key:'key'});
  assert(recent.html.includes(expected));assert(recent.text.includes(expected),'Relative copy uses the frozen lineup date');
 }
 assert.equal(dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key',activeIds:[]}),null);
-const one=dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key',activeIds:[pairs.find(p=>p.includes(id(0))).find(p=>p!==id(0))]});assert(one.subject.includes('Your opponent'));
+const one=dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key',activeIds:[pairs.find(p=>p.includes(id(0))).find(p=>p!==id(0))]});assert.equal(one.subject,'🏓 <b>Player is your matchup today');
 console.log('Daily pairing checks passed: reciprocal two-opponent lineups, small/odd/even rosters, variety/recency priorities, stable rotating ties, scoped tokens and escaped emails.');
+
+const named={...snapshot,players:snapshot.players.map((p,i)=>({...p,name:i===0?'Dasmer Singh':i===1?'JJ Kumar':i===2?'RJ Sharma':'Jay Smith'}))};
+const namedEmail=dailyEmail({snapshot:named,recipientId:id(0),origin:'https://burntboard.com',key:'key'});
+assert.equal(namedEmail.subject,'🏓 '+pairs.filter(p=>p.includes(id(0))).map(p=>named.players.find(x=>x.id===p.find(x=>x!==id(0))).name.split(' ')[0]).join(' & ')+' are your two today');
+assert(namedEmail.html.includes('Wednesday, October 14'));
+for(const noisy of ['Best of three','Suggestions, not assignments','Your opponents got the same','Open the page, then tap']) {assert(!namedEmail.html.includes(noisy));assert(!namedEmail.text.includes(noisy));}
