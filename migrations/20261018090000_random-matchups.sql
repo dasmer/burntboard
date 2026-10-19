@@ -45,25 +45,31 @@ end; $$;
 
 create or replace function public.bb_queue_daily_matchups(p_day date,p_pairs jsonb)
 returns integer language plpgsql set search_path=pg_catalog,public,pg_temp as $$
-declare run public.bb_daily_runs; n integer; queued integer;
+declare run public.bb_daily_runs; n integer; queued integer; fallback_players jsonb;
 begin
   select * into run from public.bb_daily_runs where day=p_day for update;
   if not found or run.queued_at is not null then return 0; end if;
   n:=jsonb_array_length(run.snapshot->'players');
   if jsonb_typeof(p_pairs) is distinct from 'array' then raise exception 'Invalid daily lineup'; end if;
-  -- Enforce up to two reciprocal opponents; never fill a slot with a forbidden pair.
+  select coalesce(jsonb_agg(p->>'id'),'[]') into fallback_players from jsonb_array_elements(run.snapshot->'players') p
+    where not exists(select 1 from jsonb_array_elements(run.snapshot->'players') other where other->>'id'<>p->>'id'
+      and not exists(select 1 from jsonb_array_elements(coalesce(run.snapshot->'excludedPairs','[]')) blocked
+        where blocked ? (p->>'id') and blocked ? (other->>'id')));
+  -- A repeat is allowed only to connect a player who has no fresh options.
   if jsonb_array_length(p_pairs)>n
     or exists(select 1 from jsonb_array_elements(p_pairs) e where jsonb_typeof(e)<>'array' or jsonb_array_length(e)<>2 or e->>0>=e->>1)
     or (select count(*) from (select distinct value from jsonb_array_elements(p_pairs)) p)<>jsonb_array_length(p_pairs)
     or exists(select 1 from jsonb_array_elements(p_pairs) e cross join lateral jsonb_array_elements_text(e) id where not exists(select 1 from jsonb_array_elements(run.snapshot->'players') p where p->>'id'=id))
     or exists(select 1 from jsonb_array_elements(run.snapshot->'players') p where (select count(*) from jsonb_array_elements(p_pairs) e where e ? (p->>'id'))>2)
-    or exists(select 1 from jsonb_array_elements(p_pairs) pair join jsonb_array_elements(coalesce(run.snapshot->'excludedPairs','[]')) blocked on pair=blocked)
+    or exists(select 1 from jsonb_array_elements(p_pairs) pair join jsonb_array_elements(coalesce(run.snapshot->'excludedPairs','[]')) blocked on pair=blocked
+      where not exists(select 1 from jsonb_array_elements_text(fallback_players) id where pair ? id))
     then raise exception 'Invalid daily lineup'; end if;
   update public.bb_daily_runs set snapshot=jsonb_set(snapshot,'{pairs}',p_pairs),queued_at=now() where day=p_day;
   insert into public.bb_outbox(event_id,recipient,subject,payload)
     select run.event_id,(p->>'id')::uuid,'Your opponents for today',jsonb_build_object('action','daily.matchups','day',p_day)
     from jsonb_array_elements(run.snapshot->'players') p join public.bb_players current_player on current_player.id=(p->>'id')::uuid
-    where current_player.daily_matchups and exists(select 1 from jsonb_array_elements(p_pairs) pair where pair ? (p->>'id'));
+    where current_player.daily_matchups and (exists(select 1 from jsonb_array_elements(p_pairs) pair where pair ? (p->>'id'))
+      or jsonb_array_length(coalesce(run.snapshot->'yesterdayGames','[]'))>0);
   get diagnostics queued=row_count;
   return queued;
 end; $$;

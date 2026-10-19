@@ -44,4 +44,4 @@ Match result options: exact `{ "score1": 11, "score2": 7 }` (optional `type: "ex
 
 - Authenticated `GET /daily-preference` reads your daily matchup preference.
 - Authenticated `POST /daily-preference`: `{ "enabled": false }` stops daily emails and removes you from the pairing pool; `{ "enabled": true }` rejoins. This applies only to the key owner's account.
-- Suggestions arrive weekdays at 8 AM Pacific. Picks are random, excluding anyone played or recommended the previous Pacific calendar day. Each player gets up to two reciprocal opponents (or no email when none are eligible); they are suggestions, not assignments. An unplayed recommendation also blocks that pair the following day.
+- Suggestions arrive weekdays at 8 AM Pacific. Picks are random, excluding anyone played or recommended the previous Pacific calendar day. Each player gets up to two reciprocal opponents; no fresh options gives a random mutual Run it back rematch, and no opponents gives a recap-only email when yesterday had games; they are suggestions, not assignments. An unplayed recommendation also blocks that pair the following day.

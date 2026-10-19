@@ -8,7 +8,7 @@ import {weeklyToken} from '../server/weekly-recap.mjs';
 const link=JSON.parse(readFileSync(new URL('../.insforge/project.json',import.meta.url)));
 assert.equal(config.environment,'test');assert(['burntboard-test','burntboard-series-test'].includes(link.project_name));assert.equal(config.deliveryEnabled,false);
 const origin=process.env.TEST_ORIGIN,prefix='daily'+Date.now(),ids=Array.from({length:5},()=>randomUUID()),credential=randomUUID(),gameIds=Array.from({length:5},()=>randomUUID());
-const days=['2026-10-14','2026-11-09','2026-11-10','2026-11-11','2026-11-12','2026-10-13','2026-10-12','2026-11-13','2026-11-16','2026-11-17'];
+const days=['2026-10-14','2026-11-09','2026-11-10','2026-11-11','2026-11-12','2026-10-13','2026-10-12','2026-11-13','2026-11-16','2026-11-17','2026-11-18'];
 async function cleanup(day){const runs=await query(db.database.from('bb_daily_runs').select('event_id').eq('day',day));for(const r of runs)await query(db.database.from('bb_outbox').delete().eq('event_id',r.event_id));await query(db.database.from('bb_daily_runs').delete().eq('day',day));}
 async function call(token,method='GET',body){const response=await fetch(origin+'/api/v1/daily-preference'+(method==='GET'?'?token='+encodeURIComponent(token):''),{method,headers:{Origin:origin,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});return {status:response.status,data:await response.json()};}
 try {
@@ -46,8 +46,7 @@ try {
  assert(hasExcluded(ids[0],ids[4]),'Yesterday’s queued recommendation is frozen as excluded');
  assert(!hasExcluded(ids[1],ids[4]),'Recommendations from two days ago are eligible again');
  const pairs=dailyPairs(snapshot);
- assert(!pairs.some(pair=>pair.includes(ids[0])&&pair.includes(ids[1])));assert(!pairs.some(pair=>pair.includes(ids[0])&&pair.includes(ids[4])));
- await assert.rejects(()=>rpc('bb_queue_daily_matchups',{p_day:days[0],p_pairs:[[ids[0],ids[4]].sort()]}),'Server rejects a forbidden recommendation even if generator is bypassed');
+ for(const pair of pairs)if(snapshot.excludedPairs.some(blocked=>JSON.stringify(blocked)===JSON.stringify(pair)))assert(pair.some(id=>snapshot.players.filter(p=>p.id!==id).every(other=>hasExcluded(id,other.id))),'Repeats require a player with no fresh options');
  await assert.rejects(()=>rpc('bb_queue_daily_matchups',{p_day:days[0],p_pairs:[[ids[0],ids[0]]]}),'Reject invalid lineup before any delivery queues');
  const candidates=[pairs,dailyPairs(snapshot),dailyPairs(snapshot)];const results=await Promise.all(candidates.map(candidate=>rpc('bb_queue_daily_matchups',{p_day:days[0],p_pairs:candidate})));const winningPairs=candidates[results.findIndex(n=>n>0)];assert.equal(results.filter(n=>n>0).length,1);
  const run=(await query(db.database.from('bb_daily_runs').select('*').eq('day',days[0])))[0];assert.deepEqual(run.snapshot.pairs,winningPairs);assert.deepEqual(run.snapshot.yesterdayGames,snapshot.yesterdayGames,'Results persist unchanged during queueing');assert.equal(Date.parse(run.cutoff),Date.parse('2026-10-14T15:00:00Z'));
@@ -56,17 +55,20 @@ try {
  assert.equal(await rpc('bb_daily_snapshot',{p_now:'2026-11-09T15:59:59Z'}),null,'PST before 8 AM');const winter=await rpc('bb_daily_snapshot',{p_now:'2026-11-09T16:00:00Z'});assert(!winter.yesterdayGames.some(g=>gameIds.includes(g.id)),'Empty yesterday has no fixture results');assert.equal(Date.parse(winter.cutoff),Date.parse('2026-11-09T16:00:00Z'));
  assert.equal(await rpc('bb_daily_snapshot',{p_now:'2026-11-10T18:00:00Z'}),null,'Skip stale catchup after 10 AM');
  for(const [index,n] of [[2,0],[3,1],[4,2]]) {
-   const day=days[index],small={day,players:people.slice(0,n).map(p=>({id:p.id,name:p.name})),history:[]};await query(db.database.from('bb_daily_runs').insert([{day,cutoff:day+'T16:00:00Z',snapshot:small}]));
-   assert.equal(await rpc('bb_queue_daily_matchups',{p_day:day,p_pairs:dailyPairs(small)}),n===2?2:0,'Small roster fallback');
+   const day=days[index],small={day,players:people.slice(0,n).map(p=>({id:p.id,name:p.name})),history:[],yesterdayGames:n===1?snapshot.yesterdayGames:[]};await query(db.database.from('bb_daily_runs').insert([{day,cutoff:day+'T16:00:00Z',snapshot:small}]));
+   assert.equal(await rpc('bb_queue_daily_matchups',{p_day:day,p_pairs:dailyPairs(small)}),n===2?2:n===1?1:0,'Small roster sends recap only when there is no opponent');
  }
  const sparse={day:'2026-11-13',players:people.slice(0,3).map(p=>({id:p.id,name:p.name})),history:[],excludedPairs:[[ids[0],ids[2]].sort(),[ids[1],ids[2]].sort()]};
  await query(db.database.from('bb_daily_runs').insert([{day:sparse.day,cutoff:sparse.day+'T16:00:00Z',snapshot:sparse}]));
  assert.equal(await rpc('bb_queue_daily_matchups',{p_day:sparse.day,p_pairs:dailyPairs(sparse)}),2,'Partial lineup queues two one-opponent emails only');
  const none={...sparse,day:'2026-11-16',excludedPairs:[...sparse.excludedPairs,[ids[0],ids[1]].sort()]};
- await query(db.database.from('bb_daily_runs').insert([{day:none.day,cutoff:none.day+'T16:00:00Z',snapshot:none}]));assert.equal(await rpc('bb_queue_daily_matchups',{p_day:none.day,p_pairs:dailyPairs(none)}),0,'All blocked: no forced repeats or emails');
+ await query(db.database.from('bb_daily_runs').insert([{day:none.day,cutoff:none.day+'T16:00:00Z',snapshot:none}]));assert.equal(await rpc('bb_queue_daily_matchups',{p_day:none.day,p_pairs:dailyPairs(none)}),2,'All blocked: opted-in players get mutual rematch emails');
  await query(db.database.from('bb_daily_runs').insert([{day:'2026-11-17',cutoff:'2026-11-17T16:00:00Z',snapshot:{day:'2026-11-17',players:sparse.players,history:[]}}]));
  const upgraded=await rpc('bb_daily_snapshot',{p_now:'2026-11-17T16:00:00Z'});assert(Array.isArray(upgraded.excludedPairs),'Pending old snapshots gain exclusions before pairing');
- console.log('Daily real-backend checks passed: signed/read-only preferences, default on, public privacy, PDT/PST, weekdays, two-hour catchup, cutoff roster/history, random reciprocal pairs, played/recommended exclusions, partial/empty queues, frozen concurrent winners, pending snapshot upgrades and zero/one/two players. No emails sent.');
+ const fresh={day:'2026-11-18',players:people.slice(0,4).map(p=>({id:p.id,name:p.name})),history:[],excludedPairs:[[ids[0],ids[1]].sort()]};
+ await query(db.database.from('bb_daily_runs').insert([{day:fresh.day,cutoff:fresh.day+'T16:00:00Z',snapshot:fresh}]));
+ await assert.rejects(()=>rpc('bb_queue_daily_matchups',{p_day:fresh.day,p_pairs:[[ids[0],ids[1]].sort()]}),'A rematch is rejected when both people have fresh options');
+ console.log('Daily real-backend checks passed: signed/read-only preferences, default on, public privacy, PDT/PST, weekdays, two-hour catchup, cutoff roster/history, random reciprocal pairs, played/recommended exclusions, mutual rematch and recap-only fallbacks, frozen concurrent winners, pending snapshot upgrades and zero/one/two players. No emails sent.');
 } finally {
  for(const day of days)await cleanup(day);
  await query(db.database.from('bb_activity').delete().in('actor',ids));await query(db.database.from('bb_games').delete().in('id',gameIds));await query(db.database.from('bb_sessions').delete().in('player_id',ids));await query(db.database.from('bb_players').delete().in('id',ids));

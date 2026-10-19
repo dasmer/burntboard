@@ -18,16 +18,16 @@ for(let seed=1;seed<=50;seed++) {
  const result=dailyPairs(blocked,rng(seed));assert(!result.some(p=>p.join(':')===[id(0),id(1)].join(':')),'Never repeat yesterday’s played opponent');assert(!result.some(p=>p.join(':')===[id(2),id(3)].join(':')),'Never repeat yesterday’s recommendation');
 }
 const two={...s,players:s.players.slice(0,2)};
-assert.deepEqual(dailyPairs({...two,excludedPairs:[[id(0),id(1)]]}),[],'No eligible opponent means no forced repeat');
+assert.deepEqual(dailyPairs({...two,excludedPairs:[[id(0),id(1)]]}),[[id(0),id(1)]],'No fresh choices gives one mutual rematch');
 assert.equal(dailyPairs({...two,history:[{player1:id(0),player2:id(1),games:99,lastPlayed:'2026-10-12'}]}).length,1,'Older games do not block a random matchup');
 const sparse={...s,excludedPairs:[[id(0),id(2)],[id(0),id(3)],[id(1),id(2)],[id(1),id(3)],[id(2),id(3)]]};
-assert.deepEqual(dailyPairs(sparse),[[id(0),id(1)]],'Allow one opponent and skip people with no eligible pairs');
+assert(dailyPairs(sparse,rng()).flat().includes(id(2)),'A stranded player gets a mutual fallback');
 const variants=new Set(Array.from({length:20},(_,i)=>JSON.stringify(dailyPairs(s,rng(i+1)))));assert(variants.size>1,'Different random draws produce different eligible lineups');
 assert.deepEqual(dailyPairs({...s,history:[{player1:id(0),player2:id(1),games:100,lastPlayed:'2026-10-01'}]},rng()),pairs,'Historical counts no longer weight the random selection');
 for(let n=2;n<=10;n++)for(let seed=1;seed<=10;seed++) {
  const roster=Array.from({length:n},(_,i)=>({id:id(i)})),draw=rng(seed),excludedPairs=roster.flatMap((a,i)=>roster.slice(i+1).filter(()=>draw(100)<45).map(b=>[a.id,b.id]));
  const randomSnapshot={day:s.day,players:roster,history:[],excludedPairs},result=dailyPairs(randomSnapshot,rng(seed)),degree=new Map(roster.map(p=>[p.id,0]));
- for(const [a,b] of result){assert.notEqual(a,b);assert(!excludedPairs.some(pair=>pair.includes(a)&&pair.includes(b)));degree.set(a,degree.get(a)+1);degree.set(b,degree.get(b)+1);}
+ for(const [a,b] of result){assert.notEqual(a,b);if(excludedPairs.some(pair=>pair.includes(a)&&pair.includes(b)))assert([a,b].some(person=>roster.filter(p=>p.id!==person).every(other=>excludedPairs.some(pair=>pair.includes(person)&&pair.includes(other.id)))),'Repeats only connect someone with no fresh options');degree.set(a,degree.get(a)+1);degree.set(b,degree.get(b)+1);}
  assert([...degree.values()].every(d=>d<=2));assert.equal(new Set(result.map(p=>p.join(':'))).size,result.length);
 }
 const token=dailyToken(id(0),'key');assert.equal(dailyTokenPlayer(token,'key'),id(0));assert.equal(dailyTokenPlayer(token,'wrong'),null);assert.equal(dailyTokenPlayer(weeklyToken(id(0),'key'),'key'),null,'Weekly links cannot alter daily preferences');
@@ -35,13 +35,13 @@ const snapshot={...s,pairs,players:s.players.map(p=>({...p,name:'<b>'+p.name}))}
 const email=dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key'});
 assert.equal(email.subject,'🏓 <b>Player & <b>Player are your two today');assert(email.html.includes('&lt;b&gt;'));assert(!email.html.includes('<b>Player'));assert(email.html.includes('daily-emails/'));assert(email.text.includes('A fresh matchup—no games together in four weeks.'));
 const opponent=pairs.find(p=>p.includes(id(0))).find(p=>p!==id(0));
-for(const [lastPlayed,expected] of [['2026-10-13','Back to the table—last played yesterday.'],['2026-10-02','Time to catch up—last played 12 days ago.']]) {
+for(const [lastPlayed,expected] of [['2026-10-13','Run it back.'],['2026-10-02','Time to catch up—last played 12 days ago.']]) {
  const recent=dailyEmail({snapshot:{...snapshot,history:[{player1:id(0),player2:opponent,games:2,lastPlayed}]},recipientId:id(0),origin:'https://burntboard.com',key:'key'});
  assert(recent.html.includes(expected));assert(recent.text.includes(expected),'Relative copy uses the frozen lineup date');
 }
 assert.equal(dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key',activeIds:[]}),null);
 const one=dailyEmail({snapshot,recipientId:id(0),origin:'https://burntboard.com',key:'key',activeIds:[pairs.find(p=>p.includes(id(0))).find(p=>p!==id(0))]});assert.equal(one.subject,'🏓 <b>Player is your matchup today');
-console.log('Daily pairing checks passed: reciprocal two-opponent lineups, small/odd/even rosters, hard yesterday exclusions, random variation, partial lineups, scoped tokens and escaped emails.');
+console.log('Daily pairing checks passed: reciprocal two-opponent lineups, small/odd/even rosters, fresh-first exclusions, random variation, rematch and recap-only fallbacks, scoped tokens and escaped emails.');
 
 const named={...snapshot,players:snapshot.players.map((p,i)=>({...p,name:i===0?'Dasmer Singh':i===1?'JJ Kumar':i===2?'RJ Sharma':'Jay Smith'}))};
 const namedEmail=dailyEmail({snapshot:named,recipientId:id(0),origin:'https://burntboard.com',key:'key'});
@@ -58,3 +58,18 @@ assert(recapEmail.html.includes('Yesterday at the table'));assert(recapEmail.htm
 assert(recapEmail.html.includes('&lt;script&gt;Other Player'));assert(!recapEmail.html.includes('<script>'));assert(recapEmail.html.includes('/api/v1/photos/'+id(5)));
 assert(recapEmail.html.includes('/#match/game-a'));assert(recapEmail.html.includes('/#match/game-b'));assert(recapEmail.text.includes('Dasmer Singh 2–1 <script>Other Player'));
 assert(!recapEmail.html.includes('Match 1'),'Recap contains series totals only');assert.equal(recapEmail.subject,namedEmail.subject,'Recap does not change opponent subject');
+
+for(let n=2;n<=9;n++) {
+ const roster=players.slice(0,n).length===n?players.slice(0,n):Array.from({length:n},(_,i)=>({id:id(i),name:'Player '+i}));
+ const excludedPairs=roster.flatMap((a,i)=>roster.slice(i+1).map(b=>[a.id,b.id])),allRematches=dailyPairs({...s,players:roster,excludedPairs},rng());
+ for(const p of roster){const count=allRematches.filter(pair=>pair.includes(p.id)).length;assert(count>=1&&count<=2,'All-blocked even/odd pools remain covered and capped');}
+}
+const single={...named,players:[named.players[0]],pairs:[],yesterdayGames:withResults.yesterdayGames};
+const recapOnly=dailyEmail({snapshot:single,recipientId:id(0),origin:'https://burntboard.com',key:'key'});assert.equal(recapOnly.subject,'🏓 Yesterday at the table · Burntboard');assert(!recapOnly.html.includes('View player'));assert(recapOnly.text.includes('Dasmer Singh 2–1'));assert.equal(dailyEmail({snapshot:{...single,yesterdayGames:[]},recipientId:id(0),origin:'https://burntboard.com',key:'key'}),null);
+const rerun=dailyEmail({snapshot:{...two,pairs:[[id(0),id(1)]],excludedPairs:[[id(0),id(1)]]},recipientId:id(0),origin:'https://burntboard.com',key:'key'});assert(rerun.html.includes('Run it back.'));assert(rerun.text.includes('Run it back.'));
+
+const withStranded={...s,players:players.slice(0,5),excludedPairs:players.slice(0,4).map(p=>[p.id,id(4)].sort())};
+for(let seed=1;seed<=10;seed++) {
+ const result=dailyPairs(withStranded,rng(seed));assert.equal(result.filter(pair=>pair.includes(id(4))).length,1,'One isolated player gets a rematch even when everyone else starts full');
+ for(const p of withStranded.players)assert(result.filter(pair=>pair.includes(p.id)).length<=2);
+}
