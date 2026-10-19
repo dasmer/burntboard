@@ -14,7 +14,7 @@ db.database.from=table=>{
 };
 db.database.rpc=async(name,args)=>{
  calls.push(name);
- const data=name==='bb_page_games'?[game]:name==='bb_page_activity'?[{action:'agent.connected',after_data:{email:user.email}}]:name==='bb_standings'?{standings:{all:[{id:'a',wins:1}]}}:{
+ const data=name==='bb_page_games_played'?[game]:name==='bb_page_activity'?[{action:'agent.connected',after_data:{email:user.email}}]:name==='bb_standings'?{standings:{all:[{id:'a',wins:1}]}}:{
   comments:[{id:'c',game_id:'game',player_id:'b',text:'Public comment',mentions:['a'],deleted_at:null}],
   reactions:[{game_id:'game',player_id:'b',emoji:'🔥'}],
   history:[{id:'e',actor:'a',game_id:'game',action:'game.recorded',description:'Recorded game',after_data:{score1:2,score2:0,matches:game.matches,notes:game.notes,email:user.email,token_hash:'PRIVATE_KEY_HASH'}}],

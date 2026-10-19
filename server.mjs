@@ -54,7 +54,8 @@ async function api(req,res,url) {
       const input=url.searchParams.get(kind+'Before');
       if(input) {
         let cursor;try{cursor=JSON.parse(Buffer.from(input,'base64url'));}catch{throw error('Invalid page cursor.');}
-        if(!Array.isArray(cursor) || cursor.length!==2 || !uuid(cursor[1]) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(cursor[0])) throw error('Invalid page cursor.');
+        if(!Array.isArray(cursor) || cursor.length!==(kind==='games'?3:2) || !uuid(cursor[1]) || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(cursor[0])) throw error('Invalid page cursor.');
+        if(kind==='games' && !/^\d{4}-\d{2}-\d{2}$/.test(cursor[2])) throw error('Invalid page cursor.');
         cursors[kind]=cursor;
       }
     }

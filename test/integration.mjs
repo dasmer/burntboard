@@ -160,11 +160,12 @@ for(const path of ['/demo','/demo/','/demo/api/v1/state','/demo/api/v1/auth/veri
 check((await fetch(origin+'/demo/api/v1/auth/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,404,'Retired demo login cannot authenticate');
 check((await call('/auth/verify','POST',{email:a.email,code:'123456'})).status,401,'Demo code is not accepted by real login');
 const timestamp=new Date().toISOString();
-await query(db.database.from('bb_games').insert(Array.from({length:105},()=>({player1:a.user.id,player2:b.user.id,
-  matches:[{score1:11,score2:7},{score1:11,score2:9}],date:'2026-10-08',notes:'Pagination fixture '+prefix,created_at:timestamp}))));
+await query(db.database.from('bb_games').insert(Array.from({length:105},(_,i)=>({player1:a.user.id,player2:b.user.id,
+  matches:[{score1:11,score2:7},{score1:11,score2:9}],date:i<102?'2026-10-08':'2026-10-07',notes:'Pagination fixture '+prefix,created_at:timestamp}))));
 const firstPage=await call('/state?player='+a.user.id,'GET',undefined,a.auth);check(firstPage.status,200);
 const page1=firstPage.value;
 check(page1.games.length,100);
+check(page1.games[0].date,'2026-10-08','Recently recorded older games must not jump ahead');
 const nextPage=await call('/state?player='+a.user.id+'&gamesBefore='+encodeURIComponent(page1.pagination.games),'GET',undefined,a.auth);check(nextPage.status,200);
 const page2=nextPage.value;
 check(page2.games.length,7,'Same-timestamp pagination must not lose games');
@@ -172,6 +173,12 @@ const publicPage=(await call('/state?player='+a.user.id)).value;
 check(publicPage.games.length,100,'Public profile pagination is bounded');
 check((await call('/state?player='+a.user.id+'&gamesBefore='+encodeURIComponent(publicPage.pagination.games))).value.games.length,7,'Public pagination preserves all games');
 check(new Set([...page1.games,...page2.games].map(g=>g.id)).size,107);
+const allGames=[...page1.games,...page2.games];
+check(allGames.filter(g=>g.date==='2026-10-08').slice(0,102).every(g=>g.notes.startsWith('Pagination fixture ')),true,'Same-day ties put newly recorded games first');
+const feed=(await call('/state')).value.games;
+check(feed.map(g=>g.date),feed.map(g=>g.date).sort().reverse(),'The unfiltered public feed also follows played dates');
+check(allGames.map(g=>g.date),allGames.map(g=>g.date).sort().reverse(),'Played dates descend across page boundaries');
+check(allGames.filter(g=>g.notes.startsWith('Pagination fixture ')).slice(-3).every(g=>g.date==='2026-10-07'),true,'Backdated entries remain last despite newer recording time');
 check(page1.standings.all.find(p=>p.id===a.user.id).played,107,'Standings include games beyond the first page');
 check(page1.rivalries.find(r=>r.id===a.user.id && r.opponent===b.user.id).played,107);
 check((await call('/state?gamesBefore=invalid','GET',undefined,a.auth)).status,400);
