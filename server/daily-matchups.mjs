@@ -1,4 +1,4 @@
-import {createHash,createHmac,timingSafeEqual} from 'node:crypto';
+import {randomInt,createHmac,timingSafeEqual} from 'node:crypto';
 const compare=(a,b)=>a<b?-1:a>b?1:0;
 export const dailyToken=(id,key)=>id+'.'+createHmac('sha256',key).update('daily-preference-v1:'+id).digest('base64url');
 export function dailyTokenPlayer(token,key) {
@@ -6,44 +6,31 @@ export function dailyTokenPlayer(token,key) {
   const id=token.split('.')[0],expected=dailyToken(id,key);
   return timingSafeEqual(Buffer.from(token),Buffer.from(expected))?id:null;
 }
-// Start with a shared cycle giving everyone two distinct, reciprocal opponents.
-// Cheapest insertion followed by improving edge swaps reduces a lexicographic
-// cost: recent game count, then recency, then a date-seeded tie score. No LLM.
-export function dailyPairs(snapshot) {
-  const seed=value=>createHash('sha256').update(snapshot.day+':'+value).digest('hex');
-  const ids=snapshot.players.map(p=>p.id).sort((a,b)=>compare(seed(a),seed(b))||compare(a,b));
-  const history=new Map(snapshot.history.map(h=>[[h.player1,h.player2].sort().join(':'),h]));
-  const costs=new Map();
-  const cost=(a,b)=>{const pair=[a,b].sort().join(':');if(!costs.has(pair)){const h=history.get(pair);costs.set(pair,[Number(h?.games||0),h?Math.max(0,28-(Date.parse(snapshot.day)-Date.parse(h.lastPlayed))/86400000):0,parseInt(seed(pair).slice(0,8),16)]);}return costs.get(pair);};
-  const sum=(...values)=>[0,1,2].map(i=>values.reduce((total,v)=>total+v[i],0));
-  const subtract=(a,b)=>a.map((v,i)=>v-b[i]);
-  const less=(a,b)=>{for(let i=0;i<a.length;i++)if(a[i]!==b[i])return a[i]<b[i];return false;};
-  if(ids.length<2)return [];
-  if(ids.length===2)return [[...ids].sort()];
-  const cycle=ids.slice(0,3);
-  for(const id of ids.slice(3)) {
-    let best=0,delta;
-    for(let i=0;i<cycle.length;i++) {const a=cycle[i],b=cycle[(i+1)%cycle.length],d=subtract(sum(cost(a,id),cost(id,b)),cost(a,b));if(!delta||less(d,delta)){best=i;delta=d;}}
-    cycle.splice(best+1,0,id);
-  }
-  const edges=cycle.map((id,i)=>[id,cycle[(i+1)%cycle.length]].sort());
-  // Swaps may split the initial cycle into smaller groups, avoiding unnecessary
-  // repeat opponents. Each preserves two distinct opponents for every person.
+// Shuffle eligible pairs with cryptographic randomness. Store the winning lineup
+// atomically before queueing emails, so concurrent workers/retries never reshuffle
+// a lineup already issued. The optional random function makes tests reproducible.
+export function dailyPairs(snapshot,random=randomInt) {
+  const ids=snapshot.players.map(p=>p.id).sort(),key=(a,b)=>[a,b].sort().join(':');
+  const yesterday=new Date(Date.parse(snapshot.day)-86400000).toISOString().slice(0,10);
+  const blocked=new Set((snapshot.excludedPairs||[]).map(pair=>key(...pair)));
+  for(const h of snapshot.history)if(h.lastPlayed===yesterday)blocked.add(key(h.player1,h.player2));
+  const candidates=ids.flatMap((a,i)=>ids.slice(i+1).filter(b=>!blocked.has(key(a,b))).map(b=>[a,b]));
+  for(let i=candidates.length-1;i>0;i--){const j=random(i+1);[candidates[i],candidates[j]]=[candidates[j],candidates[i]];}
+  const allowed=new Set(candidates.map(pair=>key(...pair))),selected=new Map(),degree=new Map(ids.map(id=>[id,0]));
+  const add=(a,b)=>{selected.set(key(a,b),[a,b].sort());degree.set(a,degree.get(a)+1);degree.set(b,degree.get(b)+1);};
+  // Fill random available slots, then replace one edge with two when that gives
+  // more people opponents. Forbidden edges are never used, even on sparse days.
   for(let pass=0;pass<ids.length;pass++) {
-    let change=null,best=[0,0,0];
-    const existing=new Set(edges.map(pair=>pair.join(':')));
-    for(let i=0;i<edges.length;i++)for(let j=i+1;j<edges.length;j++) {
-      const [a,b]=edges[i],[c,d]=edges[j];if(new Set([a,b,c,d]).size!==4)continue;
-      for(const replacement of [[[a,c].sort(),[b,d].sort()],[[a,d].sort(),[b,c].sort()]]) {
-        if(replacement.some(pair=>existing.has(pair.join(':'))))continue;
-        const delta=subtract(sum(...replacement.map(pair=>cost(...pair))),sum(cost(a,b),cost(c,d)));
-        if(less(delta,best)){best=delta;change=[i,j,replacement];}
-      }
+    for(const [a,b] of candidates)if(!selected.has(key(a,b))&&degree.get(a)<2&&degree.get(b)<2)add(a,b);
+    const free=ids.filter(id=>degree.get(id)<2);let replacement=null;
+    search:for(const [edge,[a,b]] of selected)for(const x of free)for(const y of free) {
+      if([a,b].includes(x)||[a,b].includes(y)||(x===y&&degree.get(x)!==0))continue;
+      if(allowed.has(key(x,a))&&allowed.has(key(y,b))&&!selected.has(key(x,a))&&!selected.has(key(y,b))){replacement={edge,a,b,x,y};break search;}
     }
-    if(!change)break;
-    edges[change[0]]=change[2][0];edges[change[1]]=change[2][1];
+    if(!replacement)break;
+    const {edge,a,b,x,y}=replacement;selected.delete(edge);degree.set(a,degree.get(a)-1);degree.set(b,degree.get(b)-1);add(x,a);add(y,b);
   }
-  return edges.sort((a,b)=>compare(a.join(':'),b.join(':')));
+  return [...selected.values()].sort((a,b)=>compare(a.join(':'),b.join(':')));
 }
 export function dailyEmail({snapshot,recipientId,origin,key,activeIds}) {
   const e=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
