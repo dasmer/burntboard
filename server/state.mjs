@@ -8,13 +8,13 @@ const publicResult=value=>value && Object.fromEntries(['score1','score2','matche
 export async function state(identity,requestedGame=null,cursors={},requestedPlayer=null) {
   const [people,games,events,keys,totals]=await Promise.all([
     readQuery(()=>db.database.from('bb_players').select(playerFields).order('username').limit(1000)),
-    readQuery(()=>db.database.rpc('bb_page_games',{p_player:requestedPlayer,p_time:cursors.games?.[0] || null,p_id:cursors.games?.[1] || null})),
+    readQuery(()=>db.database.rpc('bb_page_games_played',{p_player:requestedPlayer,p_date:cursors.games?.[2] || null,p_time:cursors.games?.[0] || null,p_id:cursors.games?.[1] || null})),
     identity ? readQuery(()=>db.database.rpc('bb_page_activity',{p_time:cursors.activity?.[0] || null,p_id:cursors.activity?.[1] || null})) : [],
     identity ? readQuery(()=>db.database.from('bb_sessions').select('id,label,created_at,expires_at').eq('player_id',identity.user.id).eq('kind','agent').is('revoked_at',null).gt('expires_at',new Date().toISOString()).limit(100)) : [],
     readQuery(()=>db.database.rpc('bb_standings',{}))
   ]);
-  const cursor=(rows)=>rows.length===100 ? Buffer.from(JSON.stringify([rows.at(-1).created_at,rows.at(-1).id])).toString('base64url') : null;
-  const pagination={games:cursor(games),activity:cursor(events)};
+  const cursor=(rows,played=false)=>rows.length===100 ? Buffer.from(JSON.stringify([rows.at(-1).created_at,rows.at(-1).id,...(played?[rows.at(-1).date]:[])])).toString('base64url') : null;
+  const pagination={games:cursor(games,true),activity:cursor(events)};
   if (requestedGame && !games.some(g=>g.id===requestedGame)) {
     const extra=await readQuery(()=>db.database.from('bb_games').select('id,player1,player2,score1,score2,matches,date,notes,revision,created_at').eq('id',requestedGame).limit(1));
     games.push(...extra);
